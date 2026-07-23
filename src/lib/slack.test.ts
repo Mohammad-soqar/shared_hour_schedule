@@ -24,6 +24,14 @@ describe('message formatting', () => {
     expect(dailyReminderMessage([{ name: 'Sara', reason: 'travel' }, { name: 'Ali', reason: 'sick' }]))
       .toBe('⏰ Shared hour today — out: Sara (travel), Ali (sick)')
   })
+  test('escapes slack mrkdwn control characters in user text', () => {
+    expect(absenceMarkedMessage('Sara', '2026-07-24', '<!channel> A & B <https://evil.example|here>'))
+      .toBe("🚫 Sara won't be available Friday, Jul 24 — &lt;!channel&gt; A &amp; B &lt;https://evil.example|here&gt;")
+  })
+  test('escapes user text in the daily reminder', () => {
+    expect(dailyReminderMessage([{ name: '<Sara>', reason: 'a & b' }]))
+      .toBe('⏰ Shared hour today — out: &lt;Sara&gt; (a &amp; b)')
+  })
 })
 
 describe('sendSlackMessage', () => {

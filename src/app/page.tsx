@@ -1,15 +1,13 @@
 import { redirect } from 'next/navigation'
 import { listAbsences } from '@/lib/absences'
 import { getCurrentMember } from '@/lib/currentUser'
-import { formatHuman, todayInRiyadh, weekdaysOfWeek } from '@/lib/dates'
+import { formatHuman, lastSelectableDate, MAX_WEEKS_AHEAD, todayInRiyadh, weekdaysOfWeek } from '@/lib/dates'
 import { createAdminSupabase } from '@/lib/supabase/admin'
 import { AbsenceCard } from './components/AbsenceCard'
 import { AbsenceForm } from './components/AbsenceForm'
 import { WeekNav } from './components/WeekNav'
 
 export const dynamic = 'force-dynamic'
-
-const MAX_WEEKS_AHEAD = 8
 
 export default async function SchedulePage({
   searchParams,
@@ -33,7 +31,7 @@ export default async function SchedulePage({
           <p className="text-sm text-slate-500">Signed in as {member.display_name}</p>
         </div>
         <div className="flex items-center gap-3">
-          <AbsenceForm today={today} />
+          <AbsenceForm today={today} maxDate={lastSelectableDate(today)} />
           <form action="/api/auth/signout" method="post">
             <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">
               Sign out

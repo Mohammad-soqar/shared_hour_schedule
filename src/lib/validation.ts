@@ -1,4 +1,4 @@
-import { isPastDate, isValidDateString, isWeekend } from './dates'
+import { isPastDate, isValidDateString, isWeekend, lastSelectableDate, MAX_WEEKS_AHEAD } from './dates'
 
 const MAX_REASON_LENGTH = 500
 
@@ -20,6 +20,9 @@ export function validateAbsenceInput(input: unknown, today: string): ValidationR
   }
   if (isPastDate(date, today)) {
     return { ok: false, error: 'That date is in the past.' }
+  }
+  if (date > lastSelectableDate(today)) {
+    return { ok: false, error: `That date is too far ahead — you can plan up to ${MAX_WEEKS_AHEAD} weeks out.` }
   }
   if (typeof reason !== 'string' || reason.trim().length === 0) {
     return { ok: false, error: 'Please add a short reason.' }

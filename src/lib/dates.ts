@@ -2,6 +2,10 @@ const RIYADH_TZ = 'Asia/Riyadh'
 const DAYS_PER_WEEK = 7
 const WEEKDAYS_SHOWN = 5
 
+// Absences beyond this window would be invisible on the board (page.tsx clamps
+// week navigation to the same bound), so validation rejects them too.
+export const MAX_WEEKS_AHEAD = 8
+
 export function todayInRiyadh(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: RIYADH_TZ }).format(new Date())
 }
@@ -35,6 +39,11 @@ export function weekdaysOfWeek(today: string, offsetWeeks: number): string[] {
     d.setUTCDate(monday.getUTCDate() + i)
     return d.toISOString().slice(0, 10)
   })
+}
+
+export function lastSelectableDate(today: string): string {
+  const lastWeek = weekdaysOfWeek(today, MAX_WEEKS_AHEAD)
+  return lastWeek[lastWeek.length - 1]
 }
 
 export function formatHuman(date: string): string {

@@ -7,12 +7,13 @@ type Status = { kind: 'idle' | 'saving' | 'error' | 'slack-warn'; message?: stri
 
 interface AbsenceFormProps {
   today: string
+  maxDate?: string
   initialDate?: string
   initialReason?: string
   small?: boolean
 }
 
-export function AbsenceForm({ today, initialDate, initialReason, small }: AbsenceFormProps) {
+export function AbsenceForm({ today, maxDate, initialDate, initialReason, small }: AbsenceFormProps) {
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState(initialDate ?? '')
   const [reason, setReason] = useState(initialReason ?? '')
@@ -79,9 +80,13 @@ export function AbsenceForm({ today, initialDate, initialReason, small }: Absenc
         type="date"
         required
         min={today}
+        max={maxDate}
         value={date}
         onChange={(e) => setDate(e.target.value)}
-        className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+        // Editing only changes the reason: the API upserts on (email, date), so a
+        // changed date would create a second absence instead of moving this one.
+        disabled={Boolean(initialDate)}
+        className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm disabled:bg-slate-100 disabled:text-slate-500"
       />
       <textarea
         required

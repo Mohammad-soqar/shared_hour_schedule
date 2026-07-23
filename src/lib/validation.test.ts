@@ -35,4 +35,12 @@ describe('validateAbsenceInput', () => {
     const result = validateAbsenceInput({ date: '2026-07-24', reason: 'a'.repeat(501) }, TODAY)
     expect(!result.ok && result.error).toMatch(/500/)
   })
+  test('accepts the last visible day (Friday of week 8)', () => {
+    const result = validateAbsenceInput({ date: '2026-09-18', reason: 'x' }, TODAY)
+    expect(result.ok).toBe(true)
+  })
+  test('rejects dates beyond the 8-week board window', () => {
+    const result = validateAbsenceInput({ date: '2026-09-21', reason: 'x' }, TODAY)
+    expect(!result.ok && result.error).toMatch(/8 weeks/i)
+  })
 })

@@ -1,20 +1,26 @@
 import { formatHuman } from './dates'
 
+// Slack renders webhook text as mrkdwn: unescaped user input could ping
+// @channel via <!channel> or spoof links via <url|label>.
+function escapeSlackText(text: string): string {
+  return text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+}
+
 export function absenceMarkedMessage(name: string, date: string, reason: string): string {
-  return `🚫 ${name} won't be available ${formatHuman(date)} — ${reason}`
+  return `🚫 ${escapeSlackText(name)} won't be available ${formatHuman(date)} — ${escapeSlackText(reason)}`
 }
 
 export function absenceUpdatedMessage(name: string, date: string, reason: string): string {
-  return `✏️ ${name}'s absence on ${formatHuman(date)} updated — ${reason}`
+  return `✏️ ${escapeSlackText(name)}'s absence on ${formatHuman(date)} updated — ${escapeSlackText(reason)}`
 }
 
 export function absenceCancelledMessage(name: string, date: string): string {
-  return `✅ ${name} is now available ${formatHuman(date)}`
+  return `✅ ${escapeSlackText(name)} is now available ${formatHuman(date)}`
 }
 
 export function dailyReminderMessage(absences: { name: string; reason: string }[]): string {
   if (absences.length === 0) return "⏰ Shared hour today — everyone's in!"
-  const out = absences.map((a) => `${a.name} (${a.reason})`).join(', ')
+  const out = absences.map((a) => `${escapeSlackText(a.name)} (${escapeSlackText(a.reason)})`).join(', ')
   return `⏰ Shared hour today — out: ${out}`
 }
 
