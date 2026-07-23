@@ -71,7 +71,7 @@ Slack channel and posts a daily morning reminder.
 - `POST /api/absences` — create/update own absence (upsert on email+date).
   Validates: weekday, not in the past, reason present.
 - `DELETE /api/absences/:id` — remove own absence.
-- `GET /api/absences?from=&to=` — list absences for the visible week range.
+- Absence reads for the board are server-rendered (no public GET endpoint needed).
 - `GET /api/cron/daily-reminder` — Vercel Cron target, Mon–Fri 06:00 UTC
   (09:00 Asia/Riyadh). Protected by `CRON_SECRET` bearer check.
 
