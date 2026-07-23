@@ -43,6 +43,26 @@ export async function deleteAbsence(
   return data
 }
 
+export type ActivityRecord = AbsenceRecord & {
+  created_at: string
+  updated_at: string
+  display_name: string
+}
+
+export async function listRecentActivity(db: Db, limit: number): Promise<ActivityRecord[]> {
+  const { data, error } = await db
+    .from('absences')
+    .select('id, email, date, reason, created_at, updated_at, allowed_members(display_name)')
+    .order('updated_at', { ascending: false })
+    .limit(limit)
+  if (error) throw new Error(error.message)
+  type Row = Omit<ActivityRecord, 'display_name'> & { allowed_members: { display_name: string } | null }
+  return ((data ?? []) as unknown as Row[]).map(({ allowed_members, ...rest }) => ({
+    ...rest,
+    display_name: allowed_members?.display_name ?? rest.email,
+  }))
+}
+
 export async function listAbsences(
   db: Db, from: string, to: string,
 ): Promise<Array<AbsenceRecord & { display_name: string }>> {

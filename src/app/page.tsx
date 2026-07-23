@@ -1,13 +1,74 @@
 import { redirect } from 'next/navigation'
-import { listAbsences } from '@/lib/absences'
+import { listAbsences, listRecentActivity, type ActivityRecord } from '@/lib/absences'
 import { getCurrentMember } from '@/lib/currentUser'
-import { formatHuman, lastSelectableDate, MAX_WEEKS_AHEAD, todayInRiyadh, weekdaysOfWeek } from '@/lib/dates'
+import { SHARED_HOUR_START } from '@/lib/config'
+import {
+  formatHuman, isWeekend, lastSelectableDate,
+  MAX_WEEKS_AHEAD, todayInRiyadh, weekdaysOfWeek,
+} from '@/lib/dates'
 import { createAdminSupabase } from '@/lib/supabase/admin'
-import { AbsenceCard } from './components/AbsenceCard'
-import { AbsenceForm } from './components/AbsenceForm'
-import { WeekNav } from './components/WeekNav'
+import { BoardClient } from './components/BoardClient'
+import type { PinnedPost, SlackEvent } from './components/types'
 
 export const dynamic = 'force-dynamic'
+
+const FEED_LIMIT = 12
+// Upserts touch updated_at even on insert, so only a real gap means "edited".
+const EDIT_GAP_MS = 5000
+
+function riyadhTimeParts(isoTimestamp: string): { date: string; hhmm: string; weekday: string } {
+  const at = new Date(isoTimestamp)
+  const date = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Riyadh' }).format(at)
+  const hhmm = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Riyadh', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(at)
+  const weekday = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Riyadh', weekday: 'short',
+  }).format(at).toUpperCase()
+  return { date, hhmm, weekday }
+}
+
+function toSlackEvent(record: ActivityRecord, today: string): SlackEvent {
+  const wasEdited =
+    new Date(record.updated_at).getTime() - new Date(record.created_at).getTime() > EDIT_GAP_MS
+  const text = wasEdited
+    ? `✏️ ${record.display_name}'s absence on ${formatHuman(record.date)} updated — ${record.reason}`
+    : `🚫 ${record.display_name} won't be available ${formatHuman(record.date)} — ${record.reason}`
+  const at = riyadhTimeParts(record.updated_at)
+  const time = at.date === today ? `TODAY ${at.hhmm}` : `${at.weekday} ${at.hhmm}`
+  return { text, time }
+}
+
+function nextMonday(today: string): string {
+  const d = new Date(`${today}T12:00:00Z`)
+  do {
+    d.setUTCDate(d.getUTCDate() + 1)
+  } while (d.getUTCDay() !== 1)
+  return d.toISOString().slice(0, 10)
+}
+
+function buildPinned(
+  today: string,
+  absencesOn: (date: string) => Array<{ display_name: string; reason: string }>,
+): PinnedPost {
+  const weekend = isWeekend(today)
+  const rollCallDate = weekend ? nextMonday(today) : today
+  const out = absencesOn(rollCallDate)
+  const dayWord = weekend ? 'Monday' : 'today'
+  const text = out.length === 0
+    ? `⏰ Shared hour ${dayWord} — everyone's in!`
+    : `⏰ Shared hour ${dayWord} — out: ${out.map((a) => `${a.display_name.split(' ')[0]} (${a.reason})`).join(', ')}`
+  if (weekend) {
+    return { label: "PREVIEW · MONDAY'S 09:00 POST", text: `No shared hour today — it's the weekend. Monday's post: ${text}` }
+  }
+  const riyadhHour = Number(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Riyadh', hour: '2-digit', hourCycle: 'h23',
+  }).format(new Date()))
+  return {
+    label: riyadhHour < 9 ? "PREVIEW · TODAY'S 09:00 POST" : "PINNED · TODAY'S 09:00 POST",
+    text,
+  }
+}
 
 export default async function SchedulePage({
   searchParams,
@@ -21,64 +82,30 @@ export default async function SchedulePage({
   const offset = Math.min(Math.max(Number(week) || 0, 0), MAX_WEEKS_AHEAD)
   const today = todayInRiyadh()
   const days = weekdaysOfWeek(today, offset)
-  const absences = await listAbsences(createAdminSupabase(), days[0], days[days.length - 1])
+  const rangeStart = days[0] < today ? days[0] : today
+  const rangeEnd = lastSelectableDate(today)
+
+  const db = createAdminSupabase()
+  const [absences, activity] = await Promise.all([
+    listAbsences(db, rangeStart, rangeEnd),
+    listRecentActivity(db, FEED_LIMIT),
+  ])
+
+  const events = activity.map((record) => toSlackEvent(record, today))
+  const pinned = buildPinned(today, (date) => absences.filter((a) => a.date === date))
 
   return (
-    <main className="mx-auto w-full max-w-6xl p-4 sm:p-8">
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Shared Hour</h1>
-          <p className="text-sm text-slate-500">Signed in as {member.display_name}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <AbsenceForm today={today} maxDate={lastSelectableDate(today)} />
-          <form action="/api/auth/signout" method="post">
-            <button className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-100">
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
-
-      <WeekNav offset={offset} maxWeeks={MAX_WEEKS_AHEAD} />
-
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {days.map((day) => {
-          const dayAbsences = absences.filter((a) => a.date === day)
-          const isToday = day === today
-          const isPast = day < today
-          return (
-            <section
-              key={day}
-              className={`rounded-2xl border bg-white p-3 ${
-                isToday ? 'border-slate-900' : 'border-slate-200'
-              } ${isPast ? 'opacity-50' : ''}`}
-            >
-              <h2 className="text-sm font-semibold text-slate-900">
-                {formatHuman(day)}
-                {isToday && (
-                  <span className="ml-2 rounded-full bg-slate-900 px-2 py-0.5 text-xs text-white">today</span>
-                )}
-              </h2>
-              <div className="mt-2 space-y-2">
-                {dayAbsences.length === 0 ? (
-                  <p className="text-xs text-slate-400">Everyone&apos;s in 🎉</p>
-                ) : (
-                  dayAbsences.map((a) => (
-                    <AbsenceCard
-                      key={a.id}
-                      absence={a}
-                      isOwn={a.email === member.email}
-                      isPast={isPast}
-                      today={today}
-                    />
-                  ))
-                )}
-              </div>
-            </section>
-          )
-        })}
-      </div>
-    </main>
+    <BoardClient
+      member={member}
+      today={today}
+      offset={offset}
+      maxWeeks={MAX_WEEKS_AHEAD}
+      days={days}
+      absences={absences}
+      events={events}
+      pinned={pinned}
+      hourStart={SHARED_HOUR_START}
+      slackConfigured={Boolean(process.env.SLACK_WEBHOOK_URL)}
+    />
   )
 }

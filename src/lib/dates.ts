@@ -51,3 +51,15 @@ export function formatHuman(date: string): string {
     weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC',
   }).format(toUtcDate(date))
 }
+
+export function formatMonthDay(date: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short', day: 'numeric', timeZone: 'UTC',
+  }).format(toUtcDate(date)).toUpperCase()
+}
+
+export function formatWeekdayShort(date: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short', timeZone: 'UTC',
+  }).format(toUtcDate(date)).toUpperCase()
+}

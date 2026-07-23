@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'vitest'
-import { formatHuman, isPastDate, isValidDateString, isWeekend, todayInRiyadh, weekdaysOfWeek } from './dates'
+import {
+  formatHuman, formatMonthDay, formatWeekdayShort, isPastDate, isValidDateString,
+  isWeekend, todayInRiyadh, weekdaysOfWeek,
+} from './dates'
 
 describe('todayInRiyadh', () => {
   test('returns a YYYY-MM-DD string', () => {
@@ -43,5 +46,17 @@ describe('weekdaysOfWeek', () => {
 describe('formatHuman', () => {
   test('formats as weekday + short month + day', () => {
     expect(formatHuman('2026-07-24')).toBe('Friday, Jul 24')
+  })
+})
+
+describe('formatMonthDay', () => {
+  test('formats as uppercase short month + day', () => {
+    expect(formatMonthDay('2026-07-24')).toBe('JUL 24')
+  })
+})
+
+describe('formatWeekdayShort', () => {
+  test('formats as uppercase short weekday', () => {
+    expect(formatWeekdayShort('2026-07-24')).toBe('FRI')
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { checkAllowed, deleteAbsence, listAbsences, upsertAbsence, type Db } from './absences'
+import { checkAllowed, deleteAbsence, listAbsences, listRecentActivity, upsertAbsence, type Db } from './absences'
 
 type Result = { data: unknown; error: { message: string } | null }
 
@@ -7,7 +7,7 @@ function fakeDb(...results: Result[]): Db {
   let i = 0
   const next = () => results[i++]
   const builder: Record<string, unknown> = {}
-  for (const m of ['select', 'eq', 'gte', 'lte', 'order', 'upsert', 'delete', 'insert']) {
+  for (const m of ['select', 'eq', 'gte', 'lte', 'order', 'upsert', 'delete', 'insert', 'limit']) {
     builder[m] = () => builder
   }
   builder.maybeSingle = () => Promise.resolve(next())
@@ -54,6 +54,28 @@ describe('deleteAbsence', () => {
   })
   test('returns null when not found / not owner', async () => {
     expect(await deleteAbsence(fakeDb({ data: null, error: null }), 'sara@x.com', 'u9')).toBeNull()
+  })
+})
+
+describe('listRecentActivity', () => {
+  test('flattens display_name and keeps timestamps', async () => {
+    const db = fakeDb({
+      data: [{
+        id: 'u1', email: 'sara@x.com', date: '2026-07-24', reason: 'travel',
+        created_at: '2026-07-20T08:00:00Z', updated_at: '2026-07-21T09:30:00Z',
+        allowed_members: { display_name: 'Sara' },
+      }],
+      error: null,
+    })
+    expect(await listRecentActivity(db, 8)).toEqual([{
+      id: 'u1', email: 'sara@x.com', date: '2026-07-24', reason: 'travel',
+      created_at: '2026-07-20T08:00:00Z', updated_at: '2026-07-21T09:30:00Z',
+      display_name: 'Sara',
+    }])
+  })
+  test('throws on db error', async () => {
+    await expect(listRecentActivity(fakeDb({ data: null, error: { message: 'bad' } }), 8))
+      .rejects.toThrow('bad')
   })
 })
 
