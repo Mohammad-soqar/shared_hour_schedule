@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
-  formatHuman, formatMonthDay, formatWeekdayShort, isPastDate, isValidDateString,
-  isWeekend, todayInRiyadh, weekdaysOfWeek,
+  daysOfWeek, formatHuman, formatMonthDay, formatWeekdayShort, isPastDate, isValidDateString,
+  isWeekend, lastSelectableDate, todayInRiyadh, weekdaysOfWeek,
 } from './dates'
 
 describe('todayInRiyadh', () => {
@@ -40,6 +40,24 @@ describe('weekdaysOfWeek', () => {
   })
   test('works when today is Sunday (start of JS week)', () => {
     expect(weekdaysOfWeek('2026-07-26', 0)[0]).toBe('2026-07-20')
+  })
+})
+
+describe('daysOfWeek', () => {
+  test('returns all 7 days Monday through Sunday', () => {
+    expect(daysOfWeek('2026-07-23', 0)).toEqual([
+      '2026-07-20', '2026-07-21', '2026-07-22', '2026-07-23', '2026-07-24',
+      '2026-07-25', '2026-07-26',
+    ])
+  })
+  test('offset 1 starts the following Monday', () => {
+    expect(daysOfWeek('2026-07-23', 1)[0]).toBe('2026-07-27')
+  })
+})
+
+describe('lastSelectableDate', () => {
+  test('is the Sunday of the final visible week', () => {
+    expect(lastSelectableDate('2026-07-23')).toBe('2026-09-20')
   })
 })
 

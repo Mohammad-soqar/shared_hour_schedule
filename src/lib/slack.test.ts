@@ -1,7 +1,8 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   absenceCancelledMessage, absenceMarkedMessage, absenceUpdatedMessage,
-  dailyReminderMessage, sendSlackMessage,
+  dailyReminderMessage, sendSlackMessage, signupCancelledMessage, signupMessage,
+  weekendReminderMessage,
 } from './slack'
 
 describe('message formatting', () => {
@@ -31,6 +32,26 @@ describe('message formatting', () => {
   test('escapes user text in the daily reminder', () => {
     expect(dailyReminderMessage([{ name: '<Sara>', reason: 'a & b' }]))
       .toBe('⏰ Shared hour today — out: &lt;Sara&gt; (a &amp; b)')
+  })
+  test('weekend signup with note and invite', () => {
+    expect(signupMessage('Sara', '2026-07-25', 'shipping the demo', 'Ali'))
+      .toBe('🙋 Sara is in for the shared hour Saturday, Jul 25 — shipping the demo · asking Ali to join')
+  })
+  test('weekend signup without note or invite', () => {
+    expect(signupMessage('Sara', '2026-07-25', '', null))
+      .toBe('🙋 Sara is in for the shared hour Saturday, Jul 25')
+  })
+  test('signup cancelled', () => {
+    expect(signupCancelledMessage('Sara', '2026-07-25'))
+      .toBe('✋ Sara pulled out of Saturday, Jul 25')
+  })
+  test('weekend reminder lists who is in', () => {
+    expect(weekendReminderMessage([{ name: 'Sara', note: 'demo' }, { name: 'Ali', note: '' }]))
+      .toBe('⏰ Weekend shared hour today — in: Sara (demo), Ali')
+  })
+  test('weekend signup escapes user text', () => {
+    expect(signupMessage('<Sara>', '2026-07-25', 'a & b', '<Ali>'))
+      .toBe('🙋 &lt;Sara&gt; is in for the shared hour Saturday, Jul 25 — a &amp; b · asking &lt;Ali&gt; to join')
   })
 })
 

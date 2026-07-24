@@ -29,20 +29,28 @@ export function isPastDate(date: string, today: string): boolean {
   return date < today
 }
 
-export function weekdaysOfWeek(today: string, offsetWeeks: number): string[] {
+function weekFromMonday(today: string, offsetWeeks: number, length: number): string[] {
   const base = toUtcDate(today)
   const daysSinceMonday = (base.getUTCDay() + 6) % DAYS_PER_WEEK
   const monday = new Date(base)
   monday.setUTCDate(base.getUTCDate() - daysSinceMonday + offsetWeeks * DAYS_PER_WEEK)
-  return Array.from({ length: WEEKDAYS_SHOWN }, (_, i) => {
+  return Array.from({ length }, (_, i) => {
     const d = new Date(monday)
     d.setUTCDate(monday.getUTCDate() + i)
     return d.toISOString().slice(0, 10)
   })
 }
 
+export function weekdaysOfWeek(today: string, offsetWeeks: number): string[] {
+  return weekFromMonday(today, offsetWeeks, WEEKDAYS_SHOWN)
+}
+
+export function daysOfWeek(today: string, offsetWeeks: number): string[] {
+  return weekFromMonday(today, offsetWeeks, DAYS_PER_WEEK)
+}
+
 export function lastSelectableDate(today: string): string {
-  const lastWeek = weekdaysOfWeek(today, MAX_WEEKS_AHEAD)
+  const lastWeek = daysOfWeek(today, MAX_WEEKS_AHEAD)
   return lastWeek[lastWeek.length - 1]
 }
 

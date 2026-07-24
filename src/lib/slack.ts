@@ -24,6 +24,24 @@ export function dailyReminderMessage(absences: { name: string; reason: string }[
   return `⏰ Shared hour today — out: ${out}`
 }
 
+export function signupMessage(name: string, date: string, note: string, invitedName: string | null): string {
+  let message = `🙋 ${escapeSlackText(name)} is in for the shared hour ${formatHuman(date)}`
+  if (note) message += ` — ${escapeSlackText(note)}`
+  if (invitedName) message += ` · asking ${escapeSlackText(invitedName)} to join`
+  return message
+}
+
+export function signupCancelledMessage(name: string, date: string): string {
+  return `✋ ${escapeSlackText(name)} pulled out of ${formatHuman(date)}`
+}
+
+export function weekendReminderMessage(signups: { name: string; note: string }[]): string {
+  const who = signups
+    .map((s) => (s.note ? `${escapeSlackText(s.name)} (${escapeSlackText(s.note)})` : escapeSlackText(s.name)))
+    .join(', ')
+  return `⏰ Weekend shared hour today — in: ${who}`
+}
+
 export async function sendSlackMessage(text: string): Promise<boolean> {
   const url = process.env.SLACK_WEBHOOK_URL
   if (!url) {
