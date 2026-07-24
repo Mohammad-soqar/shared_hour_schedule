@@ -1,14 +1,15 @@
 import { formatHuman } from '@/lib/dates'
-import type { AbsenceView } from './types'
+import type { RemovalTarget } from './types'
 
 interface RemoveModalProps {
-  target: AbsenceView
+  target: RemovalTarget
   removing: boolean
   onKeep: () => void
   onConfirm: () => void
 }
 
 export function RemoveModal({ target, removing, onKeep, onConfirm }: RemoveModalProps) {
+  const isSignup = target.kind === 'signup'
   return (
     <div onClick={onKeep} style={{
       position: 'fixed', inset: 0, zIndex: 70, background: 'rgba(12,40,36,0.45)',
@@ -22,13 +23,18 @@ export function RemoveModal({ target, removing, onKeep, onConfirm }: RemoveModal
         <div style={{
           fontSize: 11, fontWeight: 700, letterSpacing: '0.18em',
           textTransform: 'uppercase', color: 'var(--sage)',
-        }}>Cancel an absence</div>
+        }}>{isSignup ? 'Pull out of the weekend hour' : 'Cancel an absence'}</div>
         <h3 className="font-serif-display" style={{ fontWeight: 400, fontSize: 28, lineHeight: 1.15, margin: '8px 0 0' }}>
           Plans <em style={{ fontStyle: 'italic', color: 'var(--pine)' }}>changed?</em>
         </h3>
         <p style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--sage)', margin: '10px 0 0' }}>
-          We&apos;ll take <strong style={{ color: 'var(--ink)', fontWeight: 700 }}>{formatHuman(target.date)}</strong>{' '}
-          off the board and post a ✅ all-clear to #shared-hour so the team knows.
+          {isSignup ? (
+            <>We&apos;ll take you off <strong style={{ color: 'var(--ink)', fontWeight: 700 }}>{formatHuman(target.date)}</strong>{' '}
+            and post a ✋ to #shared-hour so the team knows.</>
+          ) : (
+            <>We&apos;ll take <strong style={{ color: 'var(--ink)', fontWeight: 700 }}>{formatHuman(target.date)}</strong>{' '}
+            off the board and post a ✅ all-clear to #shared-hour so the team knows.</>
+          )}
         </p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 }}>
           <button onClick={onKeep} style={{
@@ -41,7 +47,7 @@ export function RemoveModal({ target, removing, onKeep, onConfirm }: RemoveModal
             cursor: removing ? 'wait' : 'pointer', boxShadow: '0 2px 0 rgba(74,20,10,0.3)',
             opacity: removing ? 0.6 : 1,
           }}>
-            {removing ? 'Removing…' : "Remove — I'll be there"}
+            {removing ? 'Removing…' : isSignup ? "Remove — can't make it" : "Remove — I'll be there"}
           </button>
         </div>
       </div>

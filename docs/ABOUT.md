@@ -80,9 +80,21 @@ All messages go to one team channel via a webhook:
 If Slack is ever unreachable, your absence still saves — the site just
 shows a small "Saved, but the Slack notification failed" warning.
 
+## Weekends — opt-in, not expected
+
+Weekends flip the logic. Monday to Friday everyone is expected at the shared
+hour unless they say otherwise; on Saturday and Sunday **nobody** is expected
+— but if you feel like working the hour anyway, you **sign up** on the board
+(gold sticky notes instead of green). A note is optional, and you can pick a
+teammate to invite: the Slack post then says *"🙋 Mohammad is in for the
+shared hour Saturday, Jul 25 — shipping the demo · asking Sara to join."*
+Pulling out posts a ✋ so nobody waits around. The 9:00 AM roll call runs on
+weekends too, but only posts if someone actually signed up.
+
 ## The rules the app enforces
 
-- **Weekdays only** — you can't mark Saturday or Sunday.
+- **Weekdays are the default, weekends are opt-in** — absences are for
+  Mon–Fri; weekend days take sign-ups instead.
 - **No past days** — you can't mark yesterday ("today" is decided by Saudi
   time, Asia/Riyadh).
 - **Max 8 weeks ahead** — matching how far the board can display.

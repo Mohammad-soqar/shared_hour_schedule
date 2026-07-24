@@ -3,9 +3,12 @@ import { listAbsences, listRecentActivity, type ActivityRecord } from '@/lib/abs
 import { getCurrentMember } from '@/lib/currentUser'
 import { SHARED_HOUR_START } from '@/lib/config'
 import {
-  formatHuman, isWeekend, lastSelectableDate,
-  MAX_WEEKS_AHEAD, todayInRiyadh, weekdaysOfWeek,
+  daysOfWeek, formatHuman, isWeekend, lastSelectableDate,
+  MAX_WEEKS_AHEAD, todayInRiyadh,
 } from '@/lib/dates'
+import {
+  listMembers, listRecentSignupActivity, listSignups, type SignupActivityRecord,
+} from '@/lib/signups'
 import { createAdminSupabase } from '@/lib/supabase/admin'
 import { BoardClient } from './components/BoardClient'
 import type { PinnedPost, SlackEvent } from './components/types'
@@ -28,15 +31,29 @@ function riyadhTimeParts(isoTimestamp: string): { date: string; hhmm: string; we
   return { date, hhmm, weekday }
 }
 
-function toSlackEvent(record: ActivityRecord, today: string): SlackEvent {
-  const wasEdited =
-    new Date(record.updated_at).getTime() - new Date(record.created_at).getTime() > EDIT_GAP_MS
-  const text = wasEdited
+function timeLabel(isoTimestamp: string, today: string): string {
+  const at = riyadhTimeParts(isoTimestamp)
+  return at.date === today ? `TODAY ${at.hhmm}` : `${at.weekday} ${at.hhmm}`
+}
+
+function wasEdited(created: string, updated: string): boolean {
+  return new Date(updated).getTime() - new Date(created).getTime() > EDIT_GAP_MS
+}
+
+function absenceEvent(record: ActivityRecord, today: string): SlackEvent & { at: string } {
+  const text = wasEdited(record.created_at, record.updated_at)
     ? `✏️ ${record.display_name}'s absence on ${formatHuman(record.date)} updated — ${record.reason}`
     : `🚫 ${record.display_name} won't be available ${formatHuman(record.date)} — ${record.reason}`
-  const at = riyadhTimeParts(record.updated_at)
-  const time = at.date === today ? `TODAY ${at.hhmm}` : `${at.weekday} ${at.hhmm}`
-  return { text, time }
+  return { text, time: timeLabel(record.updated_at, today), at: record.updated_at }
+}
+
+function signupEvent(record: SignupActivityRecord, today: string): SlackEvent & { at: string } {
+  let text = wasEdited(record.created_at, record.updated_at)
+    ? `✏️ ${record.display_name}'s weekend sign-up on ${formatHuman(record.date)} updated`
+    : `🙋 ${record.display_name} is in for the shared hour ${formatHuman(record.date)}`
+  if (record.note) text += ` — ${record.note}`
+  if (record.invited_name) text += ` · asking ${record.invited_name} to join`
+  return { text, time: timeLabel(record.updated_at, today), at: record.updated_at }
 }
 
 function nextMonday(today: string): string {
@@ -50,20 +67,35 @@ function nextMonday(today: string): string {
 function buildPinned(
   today: string,
   absencesOn: (date: string) => Array<{ display_name: string; reason: string }>,
+  signupsOn: (date: string) => Array<{ display_name: string; note: string }>,
 ): PinnedPost {
-  const weekend = isWeekend(today)
-  const rollCallDate = weekend ? nextMonday(today) : today
-  const out = absencesOn(rollCallDate)
-  const dayWord = weekend ? 'Monday' : 'today'
-  const text = out.length === 0
-    ? `⏰ Shared hour ${dayWord} — everyone's in!`
-    : `⏰ Shared hour ${dayWord} — out: ${out.map((a) => `${a.display_name.split(' ')[0]} (${a.reason})`).join(', ')}`
-  if (weekend) {
-    return { label: "PREVIEW · MONDAY'S 09:00 POST", text: `No shared hour today — it's the weekend. Monday's post: ${text}` }
-  }
   const riyadhHour = Number(new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Riyadh', hour: '2-digit', hourCycle: 'h23',
   }).format(new Date()))
+
+  if (isWeekend(today)) {
+    const crew = signupsOn(today)
+    if (crew.length > 0) {
+      const who = crew.map((s) => (s.note ? `${s.display_name.split(' ')[0]} (${s.note})` : s.display_name.split(' ')[0])).join(', ')
+      return {
+        label: riyadhHour < 9 ? "PREVIEW · TODAY'S 09:00 POST" : "PINNED · TODAY'S 09:00 POST",
+        text: `⏰ Weekend shared hour today — in: ${who}`,
+      }
+    }
+    const out = absencesOn(nextMonday(today))
+    const monday = out.length === 0
+      ? "⏰ Shared hour Monday — everyone's in!"
+      : `⏰ Shared hour Monday — out: ${out.map((a) => `${a.display_name.split(' ')[0]} (${a.reason})`).join(', ')}`
+    return {
+      label: "PREVIEW · MONDAY'S 09:00 POST",
+      text: `Weekend's quiet — nobody signed up. ${monday}`,
+    }
+  }
+
+  const out = absencesOn(today)
+  const text = out.length === 0
+    ? "⏰ Shared hour today — everyone's in!"
+    : `⏰ Shared hour today — out: ${out.map((a) => `${a.display_name.split(' ')[0]} (${a.reason})`).join(', ')}`
   return {
     label: riyadhHour < 9 ? "PREVIEW · TODAY'S 09:00 POST" : "PINNED · TODAY'S 09:00 POST",
     text,
@@ -81,18 +113,32 @@ export default async function SchedulePage({
   const { week } = await searchParams
   const offset = Math.min(Math.max(Number(week) || 0, 0), MAX_WEEKS_AHEAD)
   const today = todayInRiyadh()
-  const days = weekdaysOfWeek(today, offset)
+  const days = daysOfWeek(today, offset)
   const rangeStart = days[0] < today ? days[0] : today
   const rangeEnd = lastSelectableDate(today)
 
   const db = createAdminSupabase()
-  const [absences, activity] = await Promise.all([
+  const [absences, signups, members, absenceActivity, signupActivity] = await Promise.all([
     listAbsences(db, rangeStart, rangeEnd),
+    listSignups(db, rangeStart, rangeEnd),
+    listMembers(db),
     listRecentActivity(db, FEED_LIMIT),
+    listRecentSignupActivity(db, FEED_LIMIT),
   ])
 
-  const events = activity.map((record) => toSlackEvent(record, today))
-  const pinned = buildPinned(today, (date) => absences.filter((a) => a.date === date))
+  const events = [
+    ...absenceActivity.map((record) => absenceEvent(record, today)),
+    ...signupActivity.map((record) => signupEvent(record, today)),
+  ]
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, FEED_LIMIT)
+    .map(({ text, time }) => ({ text, time }))
+
+  const pinned = buildPinned(
+    today,
+    (date) => absences.filter((a) => a.date === date),
+    (date) => signups.filter((s) => s.date === date),
+  )
 
   return (
     <BoardClient
@@ -102,6 +148,8 @@ export default async function SchedulePage({
       maxWeeks={MAX_WEEKS_AHEAD}
       days={days}
       absences={absences}
+      signups={signups}
+      members={members}
       events={events}
       pinned={pinned}
       hourStart={SHARED_HOUR_START}

@@ -11,10 +11,13 @@ a Slack incoming webhook + Vercel Cron.
 ## Features
 
 - **Magic-link sign-in** — no passwords; only allowlisted emails can sign in.
-- **Week board** — Mon–Fri view of who's out and why, with week navigation.
-- **Mark / edit / remove absences** — each change is announced in Slack.
-- **Daily reminder** — 09:00 Asia/Riyadh, Mon–Fri: today's absences (or
-  "everyone's in").
+- **Week board** — full Mon–Sun view with week navigation. Weekdays show who's
+  out and why; weekends are **opt-in**: nobody's expected, you sign up if you
+  want to work and can ask a teammate to join you.
+- **Mark / edit / remove absences and weekend sign-ups** — each change is
+  announced in Slack.
+- **Daily reminder** — 09:00 Asia/Riyadh. Weekdays: today's absences (or
+  "everyone's in"). Weekends: who signed up — silent if nobody did.
 
 ## Setup
 

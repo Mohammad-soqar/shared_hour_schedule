@@ -1,7 +1,7 @@
 import { formatMonthDay, formatWeekdayShort, isWeekend } from '@/lib/dates'
 import { hourRangeLabel } from '@/lib/config'
 import { ClockMark } from './ClockMark'
-import type { AbsenceView, RiyadhClock } from './types'
+import type { AbsenceView, RiyadhClock, SignupView } from './types'
 
 const NOTE_TILTS = ['-1.3', '0.9', '-0.5', '1.4']
 
@@ -9,8 +9,8 @@ function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-function hourStatus(clock: RiyadhClock, hourStart: number): string {
-  if (isWeekend(clock.iso)) return 'BACK MONDAY'
+function hourStatus(clock: RiyadhClock, hourStart: number, weekendCrew: number): string {
+  if (isWeekend(clock.iso) && weekendCrew === 0) return 'OPT-IN DAY'
   if (clock.hh === hourStart) return `NOW — ${60 - clock.mm} MIN LEFT`
   if (clock.hh < hourStart) {
     const minutesUntil = (hourStart - clock.hh) * 60 - clock.mm
@@ -45,15 +45,21 @@ interface TodayPanelProps {
   clock: RiyadhClock | null
   hourStart: number
   heroRows: AbsenceView[]
+  heroSignups: SignupView[]
   yourChips: AbsenceView[]
+  yourSignupChips: SignupView[]
   maxWeeks: number
   onOpenAdd: () => void
   onEditChip: (absence: AbsenceView) => void
+  onEditSignupChip: (signup: SignupView) => void
 }
 
 export function TodayPanel({
-  today, clock, hourStart, heroRows, yourChips, maxWeeks, onOpenAdd, onEditChip,
+  today, clock, hourStart, heroRows, heroSignups, yourChips, yourSignupChips,
+  maxWeeks, onOpenAdd, onEditChip, onEditSignupChip,
 }: TodayPanelProps) {
+  const todayIsWeekend = isWeekend(today)
+  const totalChips = yourChips.length + yourSignupChips.length
   const heroDate = new Date(`${today}T12:00:00Z`)
   const weekday = heroDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' })
   const monthYear = heroDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).toUpperCase()
@@ -110,7 +116,7 @@ export function TodayPanel({
             }}>The shared hour</span>
             <span style={{ flex: 1 }} />
             <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.12em', color: 'var(--paper)' }}>
-              {clock ? hourStatus(clock, hourStart) : ''}
+              {clock ? hourStatus(clock, hourStart, heroSignups.length) : ''}
             </span>
           </div>
           <div className="font-serif-display" style={{
@@ -131,8 +137,32 @@ export function TodayPanel({
           <div style={{
             fontSize: 10.5, fontWeight: 700, letterSpacing: '0.18em',
             textTransform: 'uppercase', color: 'var(--fog)',
-          }}>Out today</div>
-          {heroRows.length === 0 ? (
+          }}>{todayIsWeekend ? 'In today · weekend is opt-in' : 'Out today'}</div>
+          {todayIsWeekend ? (
+            heroSignups.length === 0 ? (
+              <p className="font-hand" style={{
+                fontSize: 26, lineHeight: 1.2, color: '#B09B55',
+                margin: '10px 0 2px', transform: 'rotate(-1deg)',
+              }}>weekend off 🏖 — sign up if you like</p>
+            ) : (
+              heroSignups.map((row, i) => (
+                <div key={row.id} style={{
+                  background: 'var(--sand)', borderRadius: 4,
+                  boxShadow: '0 2px 5px rgba(92,74,24,0.16)', padding: '9px 12px 7px',
+                  marginTop: 10, transform: `rotate(${NOTE_TILTS[i % 4]}deg)`,
+                }}>
+                  <div style={{
+                    fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', color: 'var(--sand-ink)',
+                  }}>🙋 {row.display_name}</div>
+                  <div className="font-hand" style={{ fontSize: 19, lineHeight: 1.2, color: 'var(--sand-ink)', marginTop: 1 }}>
+                    {row.note || 'in for the hour'}
+                    {row.invited_name ? ` · asking ${row.invited_name}` : ''}
+                  </div>
+                </div>
+              ))
+            )
+          ) : heroRows.length === 0 ? (
             <p className="font-hand" style={{
               fontSize: 26, lineHeight: 1.2, color: 'var(--grass)',
               margin: '10px 0 2px', transform: 'rotate(-1deg)',
@@ -169,19 +199,27 @@ export function TodayPanel({
         <span style={{
           fontSize: 10.5, fontWeight: 700, letterSpacing: '0.16em',
           textTransform: 'uppercase', color: 'var(--fog)',
-        }}>You&apos;re off</span>
+        }}>Your plans</span>
         {yourChips.map((chip) => (
-          <button key={chip.id} onClick={() => onEditChip(chip)} title="Edit this note" style={{
+          <button key={chip.id} onClick={() => onEditChip(chip)} title="Away — tap to edit" style={{
             fontSize: 12, fontWeight: 600, color: '#1F4740', background: 'var(--mint)',
             border: '1px solid transparent', borderRadius: 9999, padding: '4px 11px', cursor: 'pointer',
           }}>
             {formatWeekdayShort(chip.date)} {formatMonthDay(chip.date)}
           </button>
         ))}
+        {yourSignupChips.map((chip) => (
+          <button key={chip.id} onClick={() => onEditSignupChip(chip)} title="Weekend sign-up — tap to edit" style={{
+            fontSize: 12, fontWeight: 600, color: 'var(--sand-ink)', background: 'var(--sand)',
+            border: '1px solid transparent', borderRadius: 9999, padding: '4px 11px', cursor: 'pointer',
+          }}>
+            🙋 {formatWeekdayShort(chip.date)} {formatMonthDay(chip.date)}
+          </button>
+        ))}
         <span style={{ fontSize: 12.5, color: 'var(--sage)' }}>
-          {yourChips.length === 0
-            ? 'nowhere — the hour is all yours.'
-            : `— ${yourChips.length} ${yourChips.length === 1 ? 'day' : 'days'} in the next ${maxWeeks} weeks. Tap to edit.`}
+          {totalChips === 0
+            ? 'none yet — the hour is all yours.'
+            : `— ${totalChips} ${totalChips === 1 ? 'day' : 'days'} in the next ${maxWeeks} weeks. Tap to edit.`}
         </span>
       </div>
     </div>

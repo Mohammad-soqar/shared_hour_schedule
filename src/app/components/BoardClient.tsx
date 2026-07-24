@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { hourRangeLabel } from '@/lib/config'
+import { isWeekend } from '@/lib/dates'
 import type { Member } from '@/lib/absences'
 import { AwayModal } from './AwayModal'
 import { ClockMark } from './ClockMark'
@@ -12,7 +13,10 @@ import { SlackPanel } from './SlackPanel'
 import { Toast } from './Toast'
 import { TodayPanel } from './TodayPanel'
 import { WeekLedger } from './WeekLedger'
-import type { AbsenceView, ModalState, PinnedPost, RiyadhClock, SlackEvent, ToastState } from './types'
+import type {
+  AbsenceView, MemberOption, ModalState, PinnedPost, RemovalTarget,
+  RiyadhClock, SignupView, SlackEvent, ToastState,
+} from './types'
 
 const TOAST_MS = 4200
 
@@ -35,6 +39,8 @@ interface BoardClientProps {
   maxWeeks: number
   days: string[]
   absences: AbsenceView[]
+  signups: SignupView[]
+  members: MemberOption[]
   events: SlackEvent[]
   pinned: PinnedPost
   hourStart: number
@@ -42,12 +48,13 @@ interface BoardClientProps {
 }
 
 export function BoardClient({
-  member, today, offset, maxWeeks, days, absences, events, pinned, hourStart, slackConfigured,
+  member, today, offset, maxWeeks, days, absences, signups, members,
+  events, pinned, hourStart, slackConfigured,
 }: BoardClientProps) {
   const router = useRouter()
   const [clock, setClock] = useState<RiyadhClock | null>(null)
   const [modal, setModal] = useState<ModalState | null>(null)
-  const [removeTarget, setRemoveTarget] = useState<AbsenceView | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<RemovalTarget | null>(null)
   const [toast, setToast] = useState<ToastState | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -76,27 +83,53 @@ export function BoardClient({
     return map
   }, [absences])
 
+  const signupsByDay = useMemo(() => {
+    const map = new Map<string, SignupView[]>()
+    for (const signup of signups) {
+      const list = map.get(signup.date) ?? []
+      map.set(signup.date, [...list, signup])
+    }
+    return map
+  }, [signups])
+
   const heroRows = absencesByDay.get(today) ?? []
+  const heroSignups = signupsByDay.get(today) ?? []
   const yourChips = useMemo(
     () => absences
       .filter((a) => a.email === member.email && a.date >= today)
       .sort((a, b) => a.date.localeCompare(b.date)),
     [absences, member.email, today],
   )
+  const yourSignupChips = useMemo(
+    () => signups
+      .filter((s) => s.email === member.email && s.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date)),
+    [signups, member.email, today],
+  )
 
   function myReasonOn(date: string): string | null {
     return absences.find((a) => a.email === member.email && a.date === date)?.reason ?? null
   }
 
+  function mySignupOn(date: string): { note: string; invited_email: string | null } | null {
+    const signup = signups.find((s) => s.email === member.email && s.date === date)
+    return signup ? { note: signup.note, invited_email: signup.invited_email } : null
+  }
+
   async function saveModal() {
-    if (!modal || !modal.date || !modal.reason.trim()) return
-    const wasUpdate = modal.mode === 'edit' || myReasonOn(modal.date) !== null
+    if (!modal || !modal.date) return
+    const weekend = isWeekend(modal.date)
+    if (!weekend && !modal.reason.trim()) return
+    const wasUpdate = modal.mode === 'edit' ||
+      (weekend ? mySignupOn(modal.date) !== null : myReasonOn(modal.date) !== null)
     setBusy(true)
     try {
-      const response = await fetch('/api/absences', {
+      const response = await fetch(weekend ? '/api/signups' : '/api/absences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: modal.date, reason: modal.reason }),
+        body: JSON.stringify(weekend
+          ? { date: modal.date, note: modal.reason, invitedEmail: modal.invitedEmail }
+          : { date: modal.date, reason: modal.reason }),
       })
       const body = await response.json()
       if (!response.ok) {
@@ -104,11 +137,11 @@ export function BoardClient({
         return
       }
       setModal(null)
+      const okText = weekend
+        ? wasUpdate ? '✅ Sign-up updated — the channel knows.' : "🙋 You're in — posted to #shared-hour."
+        : wasUpdate ? '✅ Updated — the channel knows.' : '✅ Pinned to the board — posted to #shared-hour.'
       setToast(body.slackOk
-        ? {
-            warn: false,
-            text: wasUpdate ? '✅ Updated — the channel knows.' : '✅ Pinned to the board — posted to #shared-hour.',
-          }
+        ? { warn: false, text: okText }
         : { warn: true, text: 'Saved — but the Slack notification failed. The board is up to date.' })
       router.refresh()
     } catch {
@@ -120,17 +153,23 @@ export function BoardClient({
 
   async function confirmRemove() {
     if (!removeTarget) return
+    const endpoint = removeTarget.kind === 'signup'
+      ? `/api/signups/${removeTarget.id}`
+      : `/api/absences/${removeTarget.id}`
     setBusy(true)
     try {
-      const response = await fetch(`/api/absences/${removeTarget.id}`, { method: 'DELETE' })
+      const response = await fetch(endpoint, { method: 'DELETE' })
       const body = await response.json()
       if (!response.ok) {
         setToast({ warn: true, text: body.error ?? 'Could not remove — try again.' })
         return
       }
+      const okText = removeTarget.kind === 'signup'
+        ? '✋ Taken off — the channel knows.'
+        : '✅ Removed — #shared-hour got the all-clear.'
       setRemoveTarget(null)
       setToast(body.slackOk
-        ? { warn: false, text: '✅ Removed — #shared-hour got the all-clear.' }
+        ? { warn: false, text: okText }
         : { warn: true, text: "Removed — but Slack didn't hear about it." })
       router.refresh()
     } catch {
@@ -205,10 +244,13 @@ export function BoardClient({
             clock={clock}
             hourStart={hourStart}
             heroRows={heroRows}
+            heroSignups={heroSignups}
             yourChips={yourChips}
+            yourSignupChips={yourSignupChips}
             maxWeeks={maxWeeks}
-            onOpenAdd={() => setModal({ mode: 'add', date: null, reason: '' })}
-            onEditChip={(a) => setModal({ mode: 'edit', date: a.date, reason: a.reason })}
+            onOpenAdd={() => setModal({ mode: 'add', date: null, reason: '', invitedEmail: null })}
+            onEditChip={(a) => setModal({ mode: 'edit', date: a.date, reason: a.reason, invitedEmail: null })}
+            onEditSignupChip={(s) => setModal({ mode: 'edit', date: s.date, reason: s.note, invitedEmail: s.invited_email })}
           />
           <WeekLedger
             days={days}
@@ -217,10 +259,15 @@ export function BoardClient({
             maxWeeks={maxWeeks}
             myEmail={member.email}
             absencesByDay={absencesByDay}
+            signupsByDay={signupsByDay}
             onNavigate={navigate}
-            onAddDay={(date) => setModal({ mode: 'add', date, reason: myReasonOn(date) ?? '' })}
-            onEdit={(a) => setModal({ mode: 'edit', date: a.date, reason: a.reason })}
-            onRemove={setRemoveTarget}
+            onAddDay={(date) => setModal(isWeekend(date)
+              ? { mode: 'add', date, reason: mySignupOn(date)?.note ?? '', invitedEmail: mySignupOn(date)?.invited_email ?? null }
+              : { mode: 'add', date, reason: myReasonOn(date) ?? '', invitedEmail: null })}
+            onEditAbsence={(a) => setModal({ mode: 'edit', date: a.date, reason: a.reason, invitedEmail: null })}
+            onEditSignup={(s) => setModal({ mode: 'edit', date: s.date, reason: s.note, invitedEmail: s.invited_email })}
+            onRemoveAbsence={(a) => setRemoveTarget({ id: a.id, date: a.date, kind: 'absence' })}
+            onRemoveSignup={(s) => setRemoveTarget({ id: s.id, date: s.date, kind: 'signup' })}
           />
         </div>
 
@@ -248,7 +295,10 @@ export function BoardClient({
           maxWeeks={maxWeeks}
           saving={busy}
           slackConfigured={slackConfigured}
+          myEmail={member.email}
+          members={members}
           myReasonOn={myReasonOn}
+          mySignupOn={mySignupOn}
           onChange={setModal}
           onClose={() => setModal(null)}
           onSave={saveModal}

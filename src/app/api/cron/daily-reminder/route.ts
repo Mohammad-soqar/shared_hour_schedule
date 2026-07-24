@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { listAbsences } from '@/lib/absences'
 import { isWeekend, todayInRiyadh } from '@/lib/dates'
-import { dailyReminderMessage, sendSlackMessage } from '@/lib/slack'
+import { dailyReminderMessage, sendSlackMessage, weekendReminderMessage } from '@/lib/slack'
+import { listSignups } from '@/lib/signups'
 import { createAdminSupabase } from '@/lib/supabase/admin'
 import { requireEnv } from '@/lib/env'
 
@@ -11,10 +12,21 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
   const today = todayInRiyadh()
-  if (isWeekend(today)) return NextResponse.json({ skipped: 'weekend' })
 
   try {
-    const absences = await listAbsences(createAdminSupabase(), today, today)
+    const db = createAdminSupabase()
+    if (isWeekend(today)) {
+      const signups = await listSignups(db, today, today)
+      if (signups.length === 0) {
+        return NextResponse.json({ ok: true, skipped: 'weekend, nobody signed up' })
+      }
+      const slackOk = await sendSlackMessage(
+        weekendReminderMessage(signups.map((s) => ({ name: s.display_name, note: s.note }))),
+      )
+      return NextResponse.json({ ok: true, slackOk, signups: signups.length })
+    }
+
+    const absences = await listAbsences(db, today, today)
     const slackOk = await sendSlackMessage(
       dailyReminderMessage(absences.map((a) => ({ name: a.display_name, reason: a.reason }))),
     )

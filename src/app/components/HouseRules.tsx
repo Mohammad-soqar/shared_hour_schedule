@@ -1,8 +1,9 @@
 const RULES: Array<{ bold: string; rest: string }> = [
-  { bold: 'Weekdays only.', rest: "No Saturdays, no Sundays — there's no shared hour then." },
+  { bold: 'Weekdays are the default.', rest: "Everyone's expected — mark yourself away if you'll miss the hour." },
+  { bold: 'Weekends are opt-in.', rest: "Nobody's expected — sign up if you want to work, and ask a teammate to join you." },
   { bold: 'No past days.', rest: '"Today" is decided by Riyadh time, Asia/Riyadh.' },
   { bold: 'Up to 8 weeks ahead.', rest: 'As far as the board can see.' },
-  { bold: 'A note is required.', rest: 'Short and human — the team deserves context.' },
+  { bold: 'A note is required on weekdays.', rest: 'Short and human — the team deserves context. Weekend notes are optional.' },
   { bold: 'One note per day.', rest: 'Mark the same day twice and we just update your note.' },
   { bold: 'Only yours.', rest: "You can edit or remove your own notes — nobody else's." },
 ]
