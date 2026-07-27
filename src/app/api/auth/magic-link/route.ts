@@ -33,6 +33,12 @@ export async function POST(request: Request) {
     })
     if (error) {
       console.error('signInWithOtp failed', error)
+      if (error.status === 429 || error.code === 'over_email_send_rate_limit') {
+        return NextResponse.json(
+          { error: "Email limit reached — Supabase's free mailer only sends a couple of emails per hour. Try again in about an hour." },
+          { status: 429 },
+        )
+      }
       return NextResponse.json({ error: 'Could not send the link. Try again in a minute.' }, { status: 500 })
     }
     return NextResponse.json({ ok: true })
