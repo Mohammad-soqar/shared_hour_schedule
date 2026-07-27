@@ -11,6 +11,19 @@ function parseHour(raw: string | undefined): number | null {
 export const SHARED_HOUR_START =
   parseHour(process.env.NEXT_PUBLIC_SHARED_HOUR_START) ?? DEFAULT_HOUR_START
 
+// The design team runs its hour at a different time; until the env var is
+// set, they share the core hour.
+export const DESIGN_HOUR_START =
+  parseHour(process.env.NEXT_PUBLIC_DESIGN_HOUR_START) ?? SHARED_HOUR_START
+
+export function teamHourStart(team: string): number {
+  return team === 'design' ? DESIGN_HOUR_START : SHARED_HOUR_START
+}
+
+export function teamLabel(team: string): string {
+  return team === 'design' ? 'DESIGN TEAM' : 'CORE TEAM'
+}
+
 function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }

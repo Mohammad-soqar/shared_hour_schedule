@@ -44,6 +44,7 @@ interface TodayPanelProps {
   today: string
   clock: RiyadhClock | null
   hourStart: number
+  teamName: string
   heroRows: AbsenceView[]
   heroSignups: SignupView[]
   yourChips: AbsenceView[]
@@ -55,7 +56,7 @@ interface TodayPanelProps {
 }
 
 export function TodayPanel({
-  today, clock, hourStart, heroRows, heroSignups, yourChips, yourSignupChips,
+  today, clock, hourStart, teamName, heroRows, heroSignups, yourChips, yourSignupChips,
   maxWeeks, onOpenAdd, onEditChip, onEditSignupChip,
 }: TodayPanelProps) {
   const todayIsWeekend = isWeekend(today)
@@ -113,7 +114,7 @@ export function TodayPanel({
             <span style={{
               fontSize: 10.5, fontWeight: 800, letterSpacing: '0.18em',
               textTransform: 'uppercase', color: 'rgba(250,254,252,0.7)',
-            }}>The shared hour</span>
+            }}>Your shared hour · {teamName}</span>
             <span style={{ flex: 1 }} />
             <span style={{ fontSize: 10.5, fontWeight: 800, letterSpacing: '0.12em', color: 'var(--paper)' }}>
               {clock ? hourStatus(clock, hourStart, heroSignups.length) : ''}

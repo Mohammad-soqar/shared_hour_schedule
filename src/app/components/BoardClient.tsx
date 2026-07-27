@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { hourRangeLabel } from '@/lib/config'
+import { hourRangeLabel, teamLabel } from '@/lib/config'
 import { isWeekend } from '@/lib/dates'
 import type { Member } from '@/lib/absences'
 import { AwayModal } from './AwayModal'
@@ -210,7 +210,7 @@ export function BoardClient({
           <span style={{
             fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--pine)',
             background: 'rgba(0,106,106,0.12)', borderRadius: 9999, padding: '5px 12px', whiteSpace: 'nowrap',
-          }}>THE HOUR · {hourRangeLabel(hourStart)}</span>
+          }}>{teamLabel(member.team)} · {hourRangeLabel(hourStart)}</span>
           <span title="Asia/Riyadh decides what 'today' means" style={{
             fontSize: 12, fontWeight: 600, letterSpacing: '0.1em',
             color: 'var(--sage)', fontVariantNumeric: 'tabular-nums',
@@ -243,6 +243,7 @@ export function BoardClient({
             today={today}
             clock={clock}
             hourStart={hourStart}
+            teamName={teamLabel(member.team).toLowerCase()}
             heroRows={heroRows}
             heroSignups={heroSignups}
             yourChips={yourChips}

@@ -24,7 +24,9 @@ export async function POST(request: Request) {
       )
     }
     const supabase = await createServerSupabase()
-    const origin = new URL(request.url).origin
+    // Prefer the configured public URL: behind proxies the request origin can
+    // lie, and Supabase silently falls back to its Site URL on a mismatch.
+    const origin = process.env.NEXT_PUBLIC_SITE_URL ?? new URL(request.url).origin
     const { error } = await supabase.auth.signInWithOtp({
       email: normalized,
       options: { emailRedirectTo: `${origin}/auth/confirm` },

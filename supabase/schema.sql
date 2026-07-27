@@ -3,6 +3,7 @@
 create table if not exists allowed_members (
   email text primary key check (email = lower(email)),
   display_name text not null,
+  team text not null default 'core',
   created_at timestamptz not null default now()
 );
 

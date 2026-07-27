@@ -79,7 +79,7 @@ describe('listRecentSignupActivity', () => {
 
 describe('listMembers', () => {
   test('returns roster', async () => {
-    const roster = [{ email: 'sara@x.com', display_name: 'Sara' }]
+    const roster = [{ email: 'sara@x.com', display_name: 'Sara', team: 'core' }]
     expect(await listMembers(fakeDb({ data: roster, error: null }))).toEqual(roster)
   })
   test('throws on db error', async () => {

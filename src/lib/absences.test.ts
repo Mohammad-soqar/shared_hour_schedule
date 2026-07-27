@@ -18,7 +18,7 @@ function fakeDb(...results: Result[]): Db {
 
 describe('checkAllowed', () => {
   test('returns member when allowlisted', async () => {
-    const member = { email: 'sara@x.com', display_name: 'Sara' }
+    const member = { email: 'sara@x.com', display_name: 'Sara', team: 'core' }
     expect(await checkAllowed(fakeDb({ data: member, error: null }), 'Sara@X.com')).toEqual(member)
   })
   test('returns null when not allowlisted', async () => {

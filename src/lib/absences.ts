@@ -2,12 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type Db = SupabaseClient
 export type AbsenceRecord = { id: string; email: string; date: string; reason: string }
-export type Member = { email: string; display_name: string }
+export type Member = { email: string; display_name: string; team: string }
 
 export async function checkAllowed(db: Db, email: string): Promise<Member | null> {
   const { data, error } = await db
     .from('allowed_members')
-    .select('email, display_name')
+    .select('email, display_name, team')
     .eq('email', email.toLowerCase())
     .maybeSingle()
   if (error) throw new Error(error.message)

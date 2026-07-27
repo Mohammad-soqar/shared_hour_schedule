@@ -85,7 +85,7 @@ export async function listRecentSignupActivity(db: Db, limit: number): Promise<S
 export async function listMembers(db: Db): Promise<Member[]> {
   const { data, error } = await db
     .from('allowed_members')
-    .select('email, display_name')
+    .select('email, display_name, team')
     .order('display_name')
   if (error) throw new Error(error.message)
   return (data ?? []) as Member[]
