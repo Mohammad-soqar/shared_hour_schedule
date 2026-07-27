@@ -8,6 +8,7 @@ import type { Member } from '@/lib/absences'
 import { AwayModal } from './AwayModal'
 import { ClockMark } from './ClockMark'
 import { HouseRules } from './HouseRules'
+import { PinModal } from './PinModal'
 import { RemoveModal } from './RemoveModal'
 import { SlackPanel } from './SlackPanel'
 import { Toast } from './Toast'
@@ -58,6 +59,7 @@ export function BoardClient({
   const [clock, setClock] = useState<RiyadhClock | null>(null)
   const [modal, setModal] = useState<ModalState | null>(null)
   const [removeTarget, setRemoveTarget] = useState<RemovalTarget | null>(null)
+  const [pinOpen, setPinOpen] = useState(false)
   const [toast, setToast] = useState<ToastState | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -240,6 +242,10 @@ export function BoardClient({
               fontSize: 10, fontWeight: 700, color: '#1F4740',
             }}>{initials}</span>
             <span style={{ fontSize: 13, fontWeight: 600 }}>{member.display_name}</span>
+            <button onClick={() => setPinOpen(true)} style={{
+              border: 'none', background: 'transparent', fontSize: 12, color: 'var(--sage)',
+              cursor: 'pointer', padding: '4px 8px', borderRadius: 9999,
+            }}>PIN</button>
             <form action="/api/auth/signout" method="post" style={{ display: 'contents' }}>
               <button style={{
                 border: 'none', background: 'transparent', fontSize: 12, color: 'var(--sage)',
@@ -327,6 +333,15 @@ export function BoardClient({
           removing={busy}
           onKeep={() => setRemoveTarget(null)}
           onConfirm={confirmRemove}
+        />
+      )}
+      {pinOpen && (
+        <PinModal
+          onClose={() => setPinOpen(false)}
+          onSaved={() => {
+            setPinOpen(false)
+            setToast({ warn: false, text: '✅ PIN changed.' })
+          }}
         />
       )}
       {toast && <Toast toast={toast} />}
