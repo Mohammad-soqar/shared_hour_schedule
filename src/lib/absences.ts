@@ -65,17 +65,18 @@ export async function listRecentActivity(db: Db, limit: number): Promise<Activit
 
 export async function listAbsences(
   db: Db, from: string, to: string,
-): Promise<Array<AbsenceRecord & { display_name: string }>> {
+): Promise<Array<AbsenceRecord & { display_name: string; team: string }>> {
   const { data, error } = await db
     .from('absences')
-    .select('id, email, date, reason, allowed_members(display_name)')
+    .select('id, email, date, reason, allowed_members(display_name, team)')
     .gte('date', from)
     .lte('date', to)
     .order('date')
   if (error) throw new Error(error.message)
-  type Row = AbsenceRecord & { allowed_members: { display_name: string } | null }
+  type Row = AbsenceRecord & { allowed_members: { display_name: string; team: string } | null }
   return ((data ?? []) as unknown as Row[]).map(({ allowed_members, ...rest }) => ({
     ...rest,
     display_name: allowed_members?.display_name ?? rest.email,
+    team: allowed_members?.team ?? 'core',
   }))
 }

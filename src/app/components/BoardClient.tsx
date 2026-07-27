@@ -43,14 +43,17 @@ interface BoardClientProps {
   members: MemberOption[]
   events: SlackEvent[]
   pinned: PinnedPost
-  hourStart: number
+  coreHourStart: number
+  designHourStart: number
   slackConfigured: boolean
 }
 
 export function BoardClient({
   member, today, offset, maxWeeks, days, absences, signups, members,
-  events, pinned, hourStart, slackConfigured,
+  events, pinned, coreHourStart, designHourStart, slackConfigured,
 }: BoardClientProps) {
+  const myTeam = member.team === 'design' ? 'design' : 'core'
+  const myHourStart = myTeam === 'design' ? designHourStart : coreHourStart
   const router = useRouter()
   const [clock, setClock] = useState<RiyadhClock | null>(null)
   const [modal, setModal] = useState<ModalState | null>(null)
@@ -207,10 +210,20 @@ export function BoardClient({
             Shared <em style={{ fontStyle: 'italic', color: 'var(--pine)' }}>Hour</em>
           </span>
           <div style={{ flex: 1 }} />
-          <span style={{
-            fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', color: 'var(--pine)',
-            background: 'rgba(0,106,106,0.12)', borderRadius: 9999, padding: '5px 12px', whiteSpace: 'nowrap',
-          }}>{teamLabel(member.team)} · {hourRangeLabel(hourStart)}</span>
+          {(['core', 'design'] as const).map((team) => {
+            const isMine = team === myTeam
+            return (
+              <span key={team} style={{
+                fontSize: 11, fontWeight: 800, letterSpacing: '0.08em', whiteSpace: 'nowrap',
+                borderRadius: 9999, padding: '5px 12px',
+                color: isMine ? 'var(--pine)' : 'var(--sage)',
+                background: isMine ? 'rgba(0,106,106,0.12)' : 'transparent',
+                border: isMine ? '1px solid transparent' : '1px solid var(--hairline)',
+              }}>
+                {teamLabel(team)} · {hourRangeLabel(team === 'design' ? designHourStart : coreHourStart)}
+              </span>
+            )
+          })}
           <span title="Asia/Riyadh decides what 'today' means" style={{
             fontSize: 12, fontWeight: 600, letterSpacing: '0.1em',
             color: 'var(--sage)', fontVariantNumeric: 'tabular-nums',
@@ -242,8 +255,10 @@ export function BoardClient({
           <TodayPanel
             today={today}
             clock={clock}
-            hourStart={hourStart}
-            teamName={teamLabel(member.team).toLowerCase()}
+            hourStart={myHourStart}
+            teamName={teamLabel(myTeam).toLowerCase()}
+            otherTeamLine={`${teamLabel(myTeam === 'core' ? 'design' : 'core').toLowerCase()} · ${hourRangeLabel(myTeam === 'core' ? designHourStart : coreHourStart)}`}
+            myTeam={myTeam}
             heroRows={heroRows}
             heroSignups={heroSignups}
             yourChips={yourChips}
@@ -259,6 +274,7 @@ export function BoardClient({
             offset={offset}
             maxWeeks={maxWeeks}
             myEmail={member.email}
+            myTeam={myTeam}
             absencesByDay={absencesByDay}
             signupsByDay={signupsByDay}
             onNavigate={navigate}

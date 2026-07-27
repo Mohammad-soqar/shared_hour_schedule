@@ -45,6 +45,8 @@ interface TodayPanelProps {
   clock: RiyadhClock | null
   hourStart: number
   teamName: string
+  otherTeamLine: string
+  myTeam: string
   heroRows: AbsenceView[]
   heroSignups: SignupView[]
   yourChips: AbsenceView[]
@@ -56,8 +58,8 @@ interface TodayPanelProps {
 }
 
 export function TodayPanel({
-  today, clock, hourStart, teamName, heroRows, heroSignups, yourChips, yourSignupChips,
-  maxWeeks, onOpenAdd, onEditChip, onEditSignupChip,
+  today, clock, hourStart, teamName, otherTeamLine, myTeam, heroRows, heroSignups,
+  yourChips, yourSignupChips, maxWeeks, onOpenAdd, onEditChip, onEditSignupChip,
 }: TodayPanelProps) {
   const todayIsWeekend = isWeekend(today)
   const totalChips = yourChips.length + yourSignupChips.length
@@ -127,6 +129,12 @@ export function TodayPanel({
           <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(250,254,252,0.75)', marginTop: 3 }}>
             every weekday · Riyadh time
           </div>
+          <div style={{
+            fontSize: 10.5, fontWeight: 600, color: 'rgba(250,254,252,0.6)', marginTop: 6,
+            borderTop: '1px dashed rgba(250,254,252,0.25)', paddingTop: 6,
+          }}>
+            {otherTeamLine}
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14 }}>
           <ClockMark size={15} stroke="#5F7B74" strokeWidth={4} showDot={false} />
@@ -175,10 +183,19 @@ export function TodayPanel({
                 boxShadow: '0 2px 5px rgba(9,56,50,0.12)', padding: '9px 12px 7px',
                 marginTop: 10, transform: `rotate(${NOTE_TILTS[i % 4]}deg)`,
               }}>
-                <div style={{
-                  fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em',
-                  textTransform: 'uppercase', color: '#1F4740',
-                }}>{row.display_name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{
+                    fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em',
+                    textTransform: 'uppercase', color: '#1F4740',
+                  }}>{row.display_name}</span>
+                  {row.team !== myTeam && (
+                    <span style={{
+                      fontSize: 7.5, fontWeight: 800, letterSpacing: '0.12em',
+                      color: 'var(--sage)', border: '1px solid #BED3CC',
+                      borderRadius: 3, padding: '1.5px 4px', textTransform: 'uppercase',
+                    }}>{row.team}</span>
+                  )}
+                </div>
                 <div className="font-hand" style={{ fontSize: 19, lineHeight: 1.2, color: '#1F4740', marginTop: 1 }}>
                   {row.reason}
                 </div>

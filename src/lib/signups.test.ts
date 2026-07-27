@@ -34,20 +34,20 @@ describe('listSignups', () => {
     const db = fakeDb({
       data: [{
         id: 's1', email: 'sara@x.com', date: '2026-07-25', note: 'demo', invited_email: 'ali@x.com',
-        member: { display_name: 'Sara' }, invited: { display_name: 'Ali' },
+        member: { display_name: 'Sara', team: 'design' }, invited: { display_name: 'Ali' },
       }],
       error: null,
     })
     expect(await listSignups(db, '2026-07-20', '2026-07-26')).toEqual([{
       id: 's1', email: 'sara@x.com', date: '2026-07-25', note: 'demo',
-      invited_email: 'ali@x.com', display_name: 'Sara', invited_name: 'Ali',
+      invited_email: 'ali@x.com', display_name: 'Sara', invited_name: 'Ali', team: 'design',
     }])
   })
   test('handles missing invite', async () => {
     const db = fakeDb({
       data: [{
         id: 's2', email: 'sara@x.com', date: '2026-07-26', note: '', invited_email: null,
-        member: { display_name: 'Sara' }, invited: null,
+        member: { display_name: 'Sara', team: 'core' }, invited: null,
       }],
       error: null,
     })
@@ -65,14 +65,14 @@ describe('listRecentSignupActivity', () => {
       data: [{
         id: 's1', email: 'sara@x.com', date: '2026-07-25', note: 'demo', invited_email: null,
         created_at: '2026-07-20T08:00:00Z', updated_at: '2026-07-20T08:00:00Z',
-        member: { display_name: 'Sara' }, invited: null,
+        member: { display_name: 'Sara', team: 'core' }, invited: null,
       }],
       error: null,
     })
     expect(await listRecentSignupActivity(db, 8)).toEqual([{
       id: 's1', email: 'sara@x.com', date: '2026-07-25', note: 'demo', invited_email: null,
       created_at: '2026-07-20T08:00:00Z', updated_at: '2026-07-20T08:00:00Z',
-      display_name: 'Sara', invited_name: null,
+      display_name: 'Sara', invited_name: null, team: 'core',
     }])
   })
 })

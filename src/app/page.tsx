@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { listAbsences, listRecentActivity, type ActivityRecord } from '@/lib/absences'
 import { getCurrentMember } from '@/lib/currentUser'
-import { teamHourStart } from '@/lib/config'
+import { DESIGN_HOUR_START, SHARED_HOUR_START } from '@/lib/config'
 import {
   daysOfWeek, formatHuman, isWeekend, lastSelectableDate,
   MAX_WEEKS_AHEAD, todayInRiyadh,
@@ -152,7 +152,8 @@ export default async function SchedulePage({
       members={members}
       events={events}
       pinned={pinned}
-      hourStart={teamHourStart(member.team)}
+      coreHourStart={SHARED_HOUR_START}
+      designHourStart={DESIGN_HOUR_START}
       slackConfigured={Boolean(process.env.SLACK_WEBHOOK_URL)}
     />
   )

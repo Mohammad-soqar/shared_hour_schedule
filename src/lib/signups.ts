@@ -8,18 +8,18 @@ export type SignupRecord = {
   invited_email: string | null
 }
 
-export type SignupView = SignupRecord & { display_name: string; invited_name: string | null }
+export type SignupView = SignupRecord & { display_name: string; invited_name: string | null; team: string }
 export type SignupActivityRecord = SignupView & { created_at: string; updated_at: string }
 
 // Two FKs into allowed_members, so the joins need explicit relationship names.
 const SIGNUP_SELECT = 'id, email, date, note, invited_email, ' +
-  'member:allowed_members!signups_email_fkey(display_name), ' +
+  'member:allowed_members!signups_email_fkey(display_name, team), ' +
   'invited:allowed_members!signups_invited_email_fkey(display_name)'
 
 type JoinedRow = SignupRecord & {
   created_at?: string
   updated_at?: string
-  member: { display_name: string } | null
+  member: { display_name: string; team: string } | null
   invited: { display_name: string } | null
 }
 
@@ -29,6 +29,7 @@ function flatten(row: JoinedRow): SignupView & { created_at?: string; updated_at
     ...rest,
     display_name: member?.display_name ?? rest.email,
     invited_name: invited?.display_name ?? null,
+    team: member?.team ?? 'core',
   }
 }
 

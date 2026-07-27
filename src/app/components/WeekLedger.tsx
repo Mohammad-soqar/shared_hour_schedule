@@ -9,6 +9,7 @@ interface WeekLedgerProps {
   offset: number
   maxWeeks: number
   myEmail: string
+  myTeam: string
   absencesByDay: Map<string, AbsenceView[]>
   signupsByDay: Map<string, SignupView[]>
   onNavigate: (offset: number) => void
@@ -32,8 +33,18 @@ function noteActions(onEdit: () => void, onRemove: () => void, color: string) {
   )
 }
 
+function teamTag(team: string, color: string, border: string) {
+  return (
+    <span style={{
+      fontSize: 7.5, fontWeight: 800, letterSpacing: '0.12em', color,
+      border: `1px solid ${border}`, borderRadius: 3, padding: '1.5px 4px',
+      textTransform: 'uppercase',
+    }}>{team}</span>
+  )
+}
+
 export function WeekLedger({
-  days, today, offset, maxWeeks, myEmail, absencesByDay, signupsByDay,
+  days, today, offset, maxWeeks, myEmail, myTeam, absencesByDay, signupsByDay,
   onNavigate, onAddDay, onEditAbsence, onEditSignup, onRemoveAbsence, onRemoveSignup,
 }: WeekLedgerProps) {
   const weekTag = offset === 0 ? 'THIS WEEK' : `+${offset} ${offset === 1 ? 'WEEK' : 'WEEKS'}`
@@ -142,6 +153,7 @@ export function WeekLedger({
                               fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em',
                               textTransform: 'uppercase', color: 'var(--sand-ink)',
                             }}>🙋 {row.display_name}</span>
+                            {row.team !== myTeam && teamTag(row.team, '#8a7433', '#D9C68F')}
                             {isYou && (
                               <span style={{
                                 fontSize: 8, fontWeight: 800, letterSpacing: '0.14em',
@@ -181,6 +193,7 @@ export function WeekLedger({
                               fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em',
                               textTransform: 'uppercase', color: '#1F4740',
                             }}>{row.display_name}</span>
+                            {row.team !== myTeam && teamTag(row.team, 'var(--sage)', '#BED3CC')}
                             {isYou && (
                               <span style={{
                                 fontSize: 8, fontWeight: 800, letterSpacing: '0.14em',

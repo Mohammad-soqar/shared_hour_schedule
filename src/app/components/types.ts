@@ -4,6 +4,7 @@ export interface AbsenceView {
   date: string
   reason: string
   display_name: string
+  team: string
 }
 
 export interface SlackEvent {
@@ -31,6 +32,7 @@ export interface SignupView {
   invited_email: string | null
   display_name: string
   invited_name: string | null
+  team: string
 }
 
 export interface MemberOption {
