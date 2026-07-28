@@ -83,4 +83,11 @@ describe('sendSlackMessage', () => {
     vi.stubEnv('SLACK_WEBHOOK_URL', '')
     expect(await sendSlackMessage('hello')).toBe(false)
   })
+  test('strips BOM and whitespace from the webhook url', async () => {
+    vi.stubEnv('SLACK_WEBHOOK_URL', '﻿ https://hooks.slack.example/x \n')
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true })
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await sendSlackMessage('hello')).toBe(true)
+    expect(fetchMock.mock.calls[0][0]).toBe('https://hooks.slack.example/x')
+  })
 })

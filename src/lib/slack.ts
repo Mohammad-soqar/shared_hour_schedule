@@ -43,7 +43,9 @@ export function weekendReminderMessage(signups: { name: string; note: string }[]
 }
 
 export async function sendSlackMessage(text: string): Promise<boolean> {
-  const url = process.env.SLACK_WEBHOOK_URL
+  // Strip BOM/zero-width characters that sneak in when the URL is pasted
+  // into env managers — an invisible prefix makes fetch() reject the URL.
+  const url = process.env.SLACK_WEBHOOK_URL?.replace(/[\uFEFF\u200B]/g, '').trim()
   if (!url) {
     console.error('SLACK_WEBHOOK_URL is not set; skipping Slack notification')
     return false
