@@ -15,7 +15,9 @@ export async function DELETE(
     const { id } = await params
     const deleted = await deleteSignup(createAdminSupabase(), member.email, id)
     if (!deleted) return NextResponse.json({ error: 'Sign-up not found.' }, { status: 404 })
-    const slackOk = await sendSlackMessage(signupCancelledMessage(member.display_name, deleted.date))
+    const slackOk = await sendSlackMessage(
+      signupCancelledMessage({ name: member.display_name, slackId: member.slack_id ?? null }, deleted.date),
+    )
     return NextResponse.json({ ok: true, slackOk })
   } catch (error) {
     console.error('DELETE /api/signups/[id] failed', error)

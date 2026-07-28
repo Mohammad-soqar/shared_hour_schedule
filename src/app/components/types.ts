@@ -29,9 +29,9 @@ export interface SignupView {
   email: string
   date: string
   note: string
-  invited_email: string | null
+  invited_emails: string[]
+  invited_names: string[]
   display_name: string
-  invited_name: string | null
   team: string
 }
 
@@ -41,8 +41,8 @@ export interface MemberOption {
 }
 
 export type ModalState =
-  | { mode: 'add'; date: string | null; reason: string; invitedEmail: string | null }
-  | { mode: 'edit'; date: string; reason: string; invitedEmail: string | null }
+  | { mode: 'add'; date: string | null; reason: string; invitedEmails: string[] }
+  | { mode: 'edit'; date: string; reason: string; invitedEmails: string[] }
 
 export interface RemovalTarget {
   id: string

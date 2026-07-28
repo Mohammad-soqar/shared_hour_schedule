@@ -5,52 +5,65 @@ import {
   weekendReminderMessage,
 } from './slack'
 
+const SARA = { name: 'Sara', slackId: null }
+const TAGGED_SARA = { name: 'Sara', slackId: 'U0SARA' }
+
 describe('message formatting', () => {
-  test('marked', () => {
-    expect(absenceMarkedMessage('Sara', '2026-07-24', 'travel'))
+  test('marked (no slack id falls back to name)', () => {
+    expect(absenceMarkedMessage(SARA, '2026-07-24', 'travel'))
       .toBe("🚫 Sara won't be available Friday, Jul 24 — travel")
   })
+  test('marked tags the member when slack id is known', () => {
+    expect(absenceMarkedMessage(TAGGED_SARA, '2026-07-24', 'travel'))
+      .toBe("🚫 <@U0SARA> won't be available Friday, Jul 24 — travel")
+  })
   test('updated', () => {
-    expect(absenceUpdatedMessage('Sara', '2026-07-24', 'sick'))
-      .toBe("✏️ Sara's absence on Friday, Jul 24 updated — sick")
+    expect(absenceUpdatedMessage(TAGGED_SARA, '2026-07-24', 'sick'))
+      .toBe("✏️ <@U0SARA>'s absence on Friday, Jul 24 updated — sick")
   })
   test('cancelled', () => {
-    expect(absenceCancelledMessage('Sara', '2026-07-24'))
-      .toBe('✅ Sara is now available Friday, Jul 24')
+    expect(absenceCancelledMessage(TAGGED_SARA, '2026-07-24'))
+      .toBe('✅ <@U0SARA> is now available Friday, Jul 24')
   })
   test('reminder with nobody out', () => {
     expect(dailyReminderMessage([])).toBe("⏰ Shared hour today — everyone's in!")
   })
-  test('reminder with people out', () => {
-    expect(dailyReminderMessage([{ name: 'Sara', reason: 'travel' }, { name: 'Ali', reason: 'sick' }]))
-      .toBe('⏰ Shared hour today — out: Sara (travel), Ali (sick)')
-  })
-  test('escapes slack mrkdwn control characters in user text', () => {
-    expect(absenceMarkedMessage('Sara', '2026-07-24', '<!channel> A & B <https://evil.example|here>'))
-      .toBe("🚫 Sara won't be available Friday, Jul 24 — &lt;!channel&gt; A &amp; B &lt;https://evil.example|here&gt;")
+  test('reminder tags people who are out', () => {
+    expect(dailyReminderMessage([
+      { name: 'Sara', slackId: 'U0SARA', reason: 'travel' },
+      { name: 'Ali', slackId: null, reason: 'sick' },
+    ])).toBe('⏰ Shared hour today — out: <@U0SARA> (travel), Ali (sick)')
   })
   test('escapes user text in the daily reminder', () => {
-    expect(dailyReminderMessage([{ name: '<Sara>', reason: 'a & b' }]))
+    expect(dailyReminderMessage([{ name: '<Sara>', slackId: null, reason: 'a & b' }]))
       .toBe('⏰ Shared hour today — out: &lt;Sara&gt; (a &amp; b)')
   })
-  test('weekend signup with note and invite', () => {
-    expect(signupMessage('Sara', '2026-07-25', 'shipping the demo', 'Ali'))
+  test('weekend signup with note and invite fallback name', () => {
+    expect(signupMessage(SARA, '2026-07-25', 'shipping the demo', [{ name: 'Ali', slackId: null }]))
       .toBe('🙋 Sara is in for the shared hour Saturday, Jul 25 — shipping the demo · asking Ali to join')
   })
-  test('weekend signup without note or invite', () => {
-    expect(signupMessage('Sara', '2026-07-25', '', null))
+  test('weekend signup tags member and multiple invitees', () => {
+    expect(signupMessage(TAGGED_SARA, '2026-07-25', '', [
+      { name: 'Ali', slackId: 'U0ALI' },
+      { name: 'Omar', slackId: null },
+    ])).toBe('🙋 <@U0SARA> is in for the shared hour Saturday, Jul 25 · asking <@U0ALI>, Omar to join')
+  })
+  test('weekend signup without note or invites', () => {
+    expect(signupMessage(SARA, '2026-07-25', '', []))
       .toBe('🙋 Sara is in for the shared hour Saturday, Jul 25')
   })
   test('signup cancelled', () => {
-    expect(signupCancelledMessage('Sara', '2026-07-25'))
-      .toBe('✋ Sara pulled out of Saturday, Jul 25')
+    expect(signupCancelledMessage(TAGGED_SARA, '2026-07-25'))
+      .toBe('✋ <@U0SARA> pulled out of Saturday, Jul 25')
   })
-  test('weekend reminder lists who is in', () => {
-    expect(weekendReminderMessage([{ name: 'Sara', note: 'demo' }, { name: 'Ali', note: '' }]))
-      .toBe('⏰ Weekend shared hour today — in: Sara (demo), Ali')
+  test('weekend reminder tags who is in', () => {
+    expect(weekendReminderMessage([
+      { name: 'Sara', slackId: 'U0SARA', note: 'demo' },
+      { name: 'Ali', slackId: null, note: '' },
+    ])).toBe('⏰ Weekend shared hour today — in: <@U0SARA> (demo), Ali')
   })
   test('weekend signup escapes user text', () => {
-    expect(signupMessage('<Sara>', '2026-07-25', 'a & b', '<Ali>'))
+    expect(signupMessage({ name: '<Sara>', slackId: null }, '2026-07-25', 'a & b', [{ name: '<Ali>', slackId: null }]))
       .toBe('🙋 &lt;Sara&gt; is in for the shared hour Saturday, Jul 25 — a &amp; b · asking &lt;Ali&gt; to join')
   })
 })

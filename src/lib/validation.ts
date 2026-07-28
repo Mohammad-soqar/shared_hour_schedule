@@ -4,7 +4,7 @@ const MAX_REASON_LENGTH = 500
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
 
 export type AbsenceInput = { date: string; reason: string }
-export type SignupInput = { date: string; note: string; invitedEmail: string | null }
+export type SignupInput = { date: string; note: string; invitedEmails: string[] }
 export type ValidationResult =
   | { ok: true; value: AbsenceInput }
   | { ok: false; error: string }
@@ -43,7 +43,7 @@ export function validateSignupInput(input: unknown, today: string): SignupValida
   if (typeof input !== 'object' || input === null) {
     return { ok: false, error: 'Invalid request body.' }
   }
-  const { date, note, invitedEmail } = input as Record<string, unknown>
+  const { date, note, invitedEmails } = input as Record<string, unknown>
   if (typeof date !== 'string' || !isValidDateString(date)) {
     return { ok: false, error: 'Please pick a valid date.' }
   }
@@ -60,13 +60,16 @@ export function validateSignupInput(input: unknown, today: string): SignupValida
   if (trimmedNote.length > MAX_REASON_LENGTH) {
     return { ok: false, error: 'Note is too long (max 500 characters).' }
   }
-  let invited: string | null = null
-  if (typeof invitedEmail === 'string' && invitedEmail.trim().length > 0) {
-    const normalized = invitedEmail.trim().toLowerCase()
-    if (!EMAIL_PATTERN.test(normalized)) {
-      return { ok: false, error: "That teammate email doesn't look right." }
+  const invited: string[] = []
+  if (Array.isArray(invitedEmails)) {
+    for (const raw of invitedEmails) {
+      if (typeof raw !== 'string' || raw.trim().length === 0) continue
+      const normalized = raw.trim().toLowerCase()
+      if (!EMAIL_PATTERN.test(normalized)) {
+        return { ok: false, error: "One of those teammate emails doesn't look right." }
+      }
+      if (!invited.includes(normalized)) invited.push(normalized)
     }
-    invited = normalized
   }
-  return { ok: true, value: { date, note: trimmedNote, invitedEmail: invited } }
+  return { ok: true, value: { date, note: trimmedNote, invitedEmails: invited } }
 }

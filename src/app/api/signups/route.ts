@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
-import { checkAllowed } from '@/lib/absences'
 import { getCurrentMember } from '@/lib/currentUser'
 import { todayInRiyadh } from '@/lib/dates'
-import { sendSlackMessage, signupMessage } from '@/lib/slack'
-import { upsertSignup } from '@/lib/signups'
+import { sendSlackMessage, signupMessage, type Person } from '@/lib/slack'
+import { listMembers, upsertSignup } from '@/lib/signups'
 import { createAdminSupabase } from '@/lib/supabase/admin'
 import { validateSignupInput } from '@/lib/validation'
 
@@ -22,23 +21,27 @@ export async function POST(request: Request) {
 
   try {
     const db = createAdminSupabase()
-    let invitedName: string | null = null
-    if (result.value.invitedEmail) {
-      if (result.value.invitedEmail === member.email) {
+    const roster = await listMembers(db)
+    const invited: Person[] = []
+    for (const email of result.value.invitedEmails) {
+      if (email === member.email) {
         return NextResponse.json({ error: "You're already in — no need to invite yourself." }, { status: 400 })
       }
-      const invited = await checkAllowed(db, result.value.invitedEmail)
-      if (!invited) {
-        return NextResponse.json({ error: "That teammate isn't on the team list." }, { status: 400 })
+      const teammate = roster.find((m) => m.email === email)
+      if (!teammate) {
+        return NextResponse.json({ error: "One of those teammates isn't on the team list." }, { status: 400 })
       }
-      invitedName = invited.display_name
+      invited.push({ name: teammate.display_name, slackId: teammate.slack_id ?? null })
     }
 
     const { signup } = await upsertSignup(
-      db, member.email, result.value.date, result.value.note, result.value.invitedEmail,
+      db, member.email, result.value.date, result.value.note, result.value.invitedEmails,
     )
     const slackOk = await sendSlackMessage(
-      signupMessage(member.display_name, signup.date, signup.note, invitedName),
+      signupMessage(
+        { name: member.display_name, slackId: member.slack_id ?? null },
+        signup.date, signup.note, invited,
+      ),
     )
     return NextResponse.json({ signup, slackOk })
   } catch (error) {

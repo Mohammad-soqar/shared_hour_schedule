@@ -116,9 +116,9 @@ export function BoardClient({
     return absences.find((a) => a.email === member.email && a.date === date)?.reason ?? null
   }
 
-  function mySignupOn(date: string): { note: string; invited_email: string | null } | null {
+  function mySignupOn(date: string): { note: string; invited_emails: string[] } | null {
     const signup = signups.find((s) => s.email === member.email && s.date === date)
-    return signup ? { note: signup.note, invited_email: signup.invited_email } : null
+    return signup ? { note: signup.note, invited_emails: signup.invited_emails } : null
   }
 
   async function saveModal() {
@@ -133,7 +133,7 @@ export function BoardClient({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(weekend
-          ? { date: modal.date, note: modal.reason, invitedEmail: modal.invitedEmail }
+          ? { date: modal.date, note: modal.reason, invitedEmails: modal.invitedEmails }
           : { date: modal.date, reason: modal.reason }),
       })
       const body = await response.json()
@@ -270,9 +270,9 @@ export function BoardClient({
             yourChips={yourChips}
             yourSignupChips={yourSignupChips}
             maxWeeks={maxWeeks}
-            onOpenAdd={() => setModal({ mode: 'add', date: null, reason: '', invitedEmail: null })}
-            onEditChip={(a) => setModal({ mode: 'edit', date: a.date, reason: a.reason, invitedEmail: null })}
-            onEditSignupChip={(s) => setModal({ mode: 'edit', date: s.date, reason: s.note, invitedEmail: s.invited_email })}
+            onOpenAdd={() => setModal({ mode: 'add', date: null, reason: '', invitedEmails: [] })}
+            onEditChip={(a) => setModal({ mode: 'edit', date: a.date, reason: a.reason, invitedEmails: [] })}
+            onEditSignupChip={(s) => setModal({ mode: 'edit', date: s.date, reason: s.note, invitedEmails: s.invited_emails })}
           />
           <WeekLedger
             days={days}
@@ -285,10 +285,10 @@ export function BoardClient({
             signupsByDay={signupsByDay}
             onNavigate={navigate}
             onAddDay={(date) => setModal(isWeekend(date)
-              ? { mode: 'add', date, reason: mySignupOn(date)?.note ?? '', invitedEmail: mySignupOn(date)?.invited_email ?? null }
-              : { mode: 'add', date, reason: myReasonOn(date) ?? '', invitedEmail: null })}
-            onEditAbsence={(a) => setModal({ mode: 'edit', date: a.date, reason: a.reason, invitedEmail: null })}
-            onEditSignup={(s) => setModal({ mode: 'edit', date: s.date, reason: s.note, invitedEmail: s.invited_email })}
+              ? { mode: 'add', date, reason: mySignupOn(date)?.note ?? '', invitedEmails: mySignupOn(date)?.invited_emails ?? [] }
+              : { mode: 'add', date, reason: myReasonOn(date) ?? '', invitedEmails: [] })}
+            onEditAbsence={(a) => setModal({ mode: 'edit', date: a.date, reason: a.reason, invitedEmails: [] })}
+            onEditSignup={(s) => setModal({ mode: 'edit', date: s.date, reason: s.note, invitedEmails: s.invited_emails })}
             onRemoveAbsence={(a) => setRemoveTarget({ id: a.id, date: a.date, kind: 'absence' })}
             onRemoveSignup={(s) => setRemoveTarget({ id: s.id, date: s.date, kind: 'signup' })}
           />

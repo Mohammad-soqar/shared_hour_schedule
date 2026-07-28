@@ -46,18 +46,24 @@ describe('validateAbsenceInput', () => {
 })
 
 describe('validateSignupInput', () => {
-  test('accepts a weekend signup with a note and invited teammate', () => {
+  test('accepts a weekend signup with a note and invited teammates', () => {
     const result = validateSignupInput(
-      { date: '2026-07-25', note: ' shipping the demo ', invitedEmail: 'Sara@X.com ' }, TODAY,
+      { date: '2026-07-25', note: ' shipping the demo ', invitedEmails: ['Sara@X.com ', 'ali@x.com'] }, TODAY,
     )
     expect(result).toEqual({
       ok: true,
-      value: { date: '2026-07-25', note: 'shipping the demo', invitedEmail: 'sara@x.com' },
+      value: { date: '2026-07-25', note: 'shipping the demo', invitedEmails: ['sara@x.com', 'ali@x.com'] },
     })
   })
-  test('accepts an empty note and no invite', () => {
+  test('dedupes repeated invites', () => {
+    const result = validateSignupInput(
+      { date: '2026-07-25', note: '', invitedEmails: ['a@x.com', 'A@x.com'] }, TODAY,
+    )
+    expect(result.ok && result.value.invitedEmails).toEqual(['a@x.com'])
+  })
+  test('accepts an empty note and no invites', () => {
     const result = validateSignupInput({ date: '2026-07-26', note: '' }, TODAY)
-    expect(result).toEqual({ ok: true, value: { date: '2026-07-26', note: '', invitedEmail: null } })
+    expect(result).toEqual({ ok: true, value: { date: '2026-07-26', note: '', invitedEmails: [] } })
   })
   test('rejects weekdays', () => {
     const result = validateSignupInput({ date: '2026-07-24', note: '' }, TODAY)
@@ -79,7 +85,7 @@ describe('validateSignupInput', () => {
     expect(!result.ok && result.error).toMatch(/500/)
   })
   test('rejects malformed invited email', () => {
-    const result = validateSignupInput({ date: '2026-07-25', note: '', invitedEmail: 'not-an-email' }, TODAY)
+    const result = validateSignupInput({ date: '2026-07-25', note: '', invitedEmails: ['not-an-email'] }, TODAY)
     expect(!result.ok && result.error).toMatch(/teammate/i)
   })
 })

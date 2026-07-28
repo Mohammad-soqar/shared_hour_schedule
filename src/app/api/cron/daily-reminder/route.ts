@@ -21,14 +21,14 @@ export async function GET(request: Request) {
         return NextResponse.json({ ok: true, skipped: 'weekend, nobody signed up' })
       }
       const slackOk = await sendSlackMessage(
-        weekendReminderMessage(signups.map((s) => ({ name: s.display_name, note: s.note }))),
+        weekendReminderMessage(signups.map((s) => ({ name: s.display_name, slackId: s.slack_id, note: s.note }))),
       )
       return NextResponse.json({ ok: true, slackOk, signups: signups.length })
     }
 
     const absences = await listAbsences(db, today, today)
     const slackOk = await sendSlackMessage(
-      dailyReminderMessage(absences.map((a) => ({ name: a.display_name, reason: a.reason }))),
+      dailyReminderMessage(absences.map((a) => ({ name: a.display_name, slackId: a.slack_id, reason: a.reason }))),
     )
     return NextResponse.json({ ok: true, slackOk, absences: absences.length })
   } catch (error) {

@@ -10,7 +10,7 @@ interface AwayModalProps {
   myEmail: string
   members: MemberOption[]
   myReasonOn: (date: string) => string | null
-  mySignupOn: (date: string) => { note: string; invited_email: string | null } | null
+  mySignupOn: (date: string) => { note: string; invited_emails: string[] } | null
   onChange: (modal: ModalState) => void
   onClose: () => void
   onSave: () => void
@@ -38,12 +38,19 @@ export function AwayModal({
       onChange({
         ...modal, date,
         reason: modal.reason || existing?.note || '',
-        invitedEmail: modal.invitedEmail ?? existing?.invited_email ?? null,
+        invitedEmails: modal.invitedEmails.length > 0 ? modal.invitedEmails : existing?.invited_emails ?? [],
       })
     } else {
       const existing = myReasonOn(date)
-      onChange({ ...modal, date, reason: modal.reason || existing || '', invitedEmail: null })
+      onChange({ ...modal, date, reason: modal.reason || existing || '', invitedEmails: [] })
     }
+  }
+
+  function toggleInvite(email: string) {
+    const next = modal.invitedEmails.includes(email)
+      ? modal.invitedEmails.filter((e) => e !== email)
+      : [...modal.invitedEmails, email]
+    onChange({ ...modal, invitedEmails: next })
   }
 
   const eyebrow = isEdit
@@ -217,27 +224,34 @@ export function AwayModal({
 
         {weekend && (
           <div style={{ marginTop: 18 }}>
-            <label htmlFor="sh-invite" style={{
+            <span style={{
               display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '0.16em',
               textTransform: 'uppercase', color: 'var(--sage)',
-            }}>Ask a teammate to join you (optional)</label>
-            <select
-              id="sh-invite"
-              value={modal.invitedEmail ?? ''}
-              onChange={(e) => onChange({ ...modal, invitedEmail: e.target.value || null })}
-              style={{
-                marginTop: 8, display: 'block', width: '100%', height: 42, borderRadius: 10,
-                border: '1.5px solid #D9C68F', background: 'var(--sand-row)', padding: '0 12px',
-                fontSize: 14, outline: 'none', color: 'var(--ink)',
-              }}
-            >
-              <option value="">No one — just me</option>
-              {teammates.map((m) => (
-                <option key={m.email} value={m.email}>{m.display_name}</option>
-              ))}
-            </select>
-            <p style={{ fontSize: 11.5, color: 'var(--fog)', margin: '6px 0 0' }}>
-              They&apos;ll be named in the Slack post — a friendly nudge, not an obligation.
+            }}>Ask teammates to join you (optional — pick any)</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+              {teammates.map((m) => {
+                const selected = modal.invitedEmails.includes(m.email)
+                return (
+                  <button
+                    key={m.email}
+                    type="button"
+                    onClick={() => toggleInvite(m.email)}
+                    aria-pressed={selected}
+                    style={{
+                      fontSize: 12.5, fontWeight: 600, borderRadius: 9999, padding: '6px 13px',
+                      cursor: 'pointer', transition: 'all 120ms ease',
+                      border: `1.5px solid ${selected ? 'var(--sand-ink)' : '#D9C68F'}`,
+                      background: selected ? 'var(--sand-ink)' : 'var(--sand-row)',
+                      color: selected ? 'var(--paper)' : 'var(--sand-ink)',
+                    }}
+                  >
+                    {selected ? '✓ ' : ''}{m.display_name}
+                  </button>
+                )
+              })}
+            </div>
+            <p style={{ fontSize: 11.5, color: 'var(--fog)', margin: '8px 0 0' }}>
+              They&apos;ll be tagged in the Slack post — a friendly nudge, not an obligation.
             </p>
           </div>
         )}

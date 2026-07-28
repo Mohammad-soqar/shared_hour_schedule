@@ -80,13 +80,13 @@ describe('listRecentActivity', () => {
 })
 
 describe('listAbsences', () => {
-  test('flattens joined display_name and team', async () => {
+  test('flattens joined display_name, team, and slack id', async () => {
     const db = fakeDb({
-      data: [{ id: 'u1', email: 'sara@x.com', date: '2026-07-24', reason: 'travel', allowed_members: { display_name: 'Sara', team: 'design' } }],
+      data: [{ id: 'u1', email: 'sara@x.com', date: '2026-07-24', reason: 'travel', allowed_members: { display_name: 'Sara', team: 'design', slack_id: 'U0SARA' } }],
       error: null,
     })
     expect(await listAbsences(db, '2026-07-20', '2026-07-24')).toEqual([
-      { id: 'u1', email: 'sara@x.com', date: '2026-07-24', reason: 'travel', display_name: 'Sara', team: 'design' },
+      { id: 'u1', email: 'sara@x.com', date: '2026-07-24', reason: 'travel', display_name: 'Sara', team: 'design', slack_id: 'U0SARA' },
     ])
   })
   test('throws on db error', async () => {

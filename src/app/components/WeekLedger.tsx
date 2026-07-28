@@ -165,11 +165,11 @@ export function WeekLedger({
                           <div className="font-hand" style={{ fontSize: 20, lineHeight: 1.2, color: 'var(--sand-ink)', marginTop: 2 }}>
                             {row.note || 'in for the hour'}
                           </div>
-                          {row.invited_name && (
+                          {row.invited_names.length > 0 && (
                             <div style={{
                               fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
                               color: '#8a7433', marginTop: 4,
-                            }}>+ asking {row.invited_name} to join</div>
+                            }}>+ asking {row.invited_names.join(', ')} to join</div>
                           )}
                           {isYou && !isPast && noteActions(() => onEditSignup(row), () => onRemoveSignup(row), '#8a7433')}
                         </div>

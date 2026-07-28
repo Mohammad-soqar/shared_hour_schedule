@@ -23,9 +23,10 @@ export async function POST(request: Request) {
     const { absence, wasUpdate } = await upsertAbsence(
       createAdminSupabase(), member.email, result.value.date, result.value.reason,
     )
+    const person = { name: member.display_name, slackId: member.slack_id ?? null }
     const message = wasUpdate
-      ? absenceUpdatedMessage(member.display_name, absence.date, absence.reason)
-      : absenceMarkedMessage(member.display_name, absence.date, absence.reason)
+      ? absenceUpdatedMessage(person, absence.date, absence.reason)
+      : absenceMarkedMessage(person, absence.date, absence.reason)
     const slackOk = await sendSlackMessage(message)
     return NextResponse.json({ absence, slackOk })
   } catch (error) {

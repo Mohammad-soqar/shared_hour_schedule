@@ -47,12 +47,16 @@ function absenceEvent(record: ActivityRecord, today: string): SlackEvent & { at:
   return { text, time: timeLabel(record.updated_at, today), at: record.updated_at }
 }
 
-function signupEvent(record: SignupActivityRecord, today: string): SlackEvent & { at: string } {
+function signupEvent(
+  record: SignupActivityRecord, today: string, nameOf: (email: string) => string,
+): SlackEvent & { at: string } {
   let text = wasEdited(record.created_at, record.updated_at)
     ? `✏️ ${record.display_name}'s weekend sign-up on ${formatHuman(record.date)} updated`
     : `🙋 ${record.display_name} is in for the shared hour ${formatHuman(record.date)}`
   if (record.note) text += ` — ${record.note}`
-  if (record.invited_name) text += ` · asking ${record.invited_name} to join`
+  if (record.invited_emails.length > 0) {
+    text += ` · asking ${record.invited_emails.map(nameOf).join(', ')} to join`
+  }
   return { text, time: timeLabel(record.updated_at, today), at: record.updated_at }
 }
 
@@ -126,9 +130,16 @@ export default async function SchedulePage({
     listRecentSignupActivity(db, FEED_LIMIT),
   ])
 
+  const nameByEmail = new Map(members.map((m) => [m.email, m.display_name]))
+  const nameOf = (email: string) => nameByEmail.get(email) ?? email
+  const signupViews = signups.map((s) => ({
+    ...s,
+    invited_names: s.invited_emails.map(nameOf),
+  }))
+
   const events = [
     ...absenceActivity.map((record) => absenceEvent(record, today)),
-    ...signupActivity.map((record) => signupEvent(record, today)),
+    ...signupActivity.map((record) => signupEvent(record, today, nameOf)),
   ]
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, FEED_LIMIT)
@@ -148,7 +159,7 @@ export default async function SchedulePage({
       maxWeeks={MAX_WEEKS_AHEAD}
       days={days}
       absences={absences}
-      signups={signups}
+      signups={signupViews}
       members={members}
       events={events}
       pinned={pinned}

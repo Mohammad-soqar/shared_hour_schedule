@@ -2,12 +2,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 
 export type Db = SupabaseClient
 export type AbsenceRecord = { id: string; email: string; date: string; reason: string }
-export type Member = { email: string; display_name: string; team: string }
+export type Member = { email: string; display_name: string; team: string; slack_id?: string | null }
 
 export async function checkAllowed(db: Db, email: string): Promise<Member | null> {
   const { data, error } = await db
     .from('allowed_members')
-    .select('email, display_name, team')
+    .select('email, display_name, team, slack_id')
     .eq('email', email.toLowerCase())
     .maybeSingle()
   if (error) throw new Error(error.message)
@@ -65,18 +65,19 @@ export async function listRecentActivity(db: Db, limit: number): Promise<Activit
 
 export async function listAbsences(
   db: Db, from: string, to: string,
-): Promise<Array<AbsenceRecord & { display_name: string; team: string }>> {
+): Promise<Array<AbsenceRecord & { display_name: string; team: string; slack_id: string | null }>> {
   const { data, error } = await db
     .from('absences')
-    .select('id, email, date, reason, allowed_members(display_name, team)')
+    .select('id, email, date, reason, allowed_members(display_name, team, slack_id)')
     .gte('date', from)
     .lte('date', to)
     .order('date')
   if (error) throw new Error(error.message)
-  type Row = AbsenceRecord & { allowed_members: { display_name: string; team: string } | null }
+  type Row = AbsenceRecord & { allowed_members: { display_name: string; team: string; slack_id: string | null } | null }
   return ((data ?? []) as unknown as Row[]).map(({ allowed_members, ...rest }) => ({
     ...rest,
     display_name: allowed_members?.display_name ?? rest.email,
     team: allowed_members?.team ?? 'core',
+    slack_id: allowed_members?.slack_id ?? null,
   }))
 }
