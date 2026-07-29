@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   absenceCancelledMessage, absenceMarkedMessage, absenceUpdatedMessage,
-  dailyReminderMessage, sendSlackMessage, signupCancelledMessage, signupMessage,
-  weekendReminderMessage,
+  dailyReminderMessage, inviteAcceptedMessage, inviteDeclinedMessage,
+  sendSlackMessage, signupCancelledMessage, signupMessage, weekendReminderMessage,
 } from './slack'
 
 const SARA = { name: 'Sara', slackId: null }
@@ -55,6 +55,14 @@ describe('message formatting', () => {
   test('signup cancelled', () => {
     expect(signupCancelledMessage(TAGGED_SARA, '2026-07-25'))
       .toBe('✋ <@U0SARA> pulled out of Saturday, Jul 25')
+  })
+  test('invite accepted tags both people', () => {
+    expect(inviteAcceptedMessage(TAGGED_SARA, { name: 'Ali', slackId: 'U0ALI' }, '2026-07-25'))
+      .toBe('✅ <@U0SARA> is in — joining <@U0ALI> Saturday, Jul 25')
+  })
+  test('invite declined tags the person', () => {
+    expect(inviteDeclinedMessage(TAGGED_SARA, '2026-07-25'))
+      .toBe("✋ <@U0SARA> can't make Saturday, Jul 25")
   })
   test('weekend reminder tags who is in', () => {
     expect(weekendReminderMessage([

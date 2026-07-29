@@ -166,7 +166,7 @@ export function TodayPanel({
                   }}>🙋 {row.display_name}</div>
                   <div className="font-hand" style={{ fontSize: 19, lineHeight: 1.2, color: 'var(--sand-ink)', marginTop: 1 }}>
                     {row.note || 'in for the hour'}
-                    {row.invited_names.length > 0 ? ` · asking ${row.invited_names.join(', ')}` : ''}
+                    {row.invites.length > 0 ? ` · asking ${row.invites.map((i) => i.name).join(', ')}` : ''}
                   </div>
                 </div>
               ))

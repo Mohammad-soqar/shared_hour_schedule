@@ -45,6 +45,14 @@ export function signupCancelledMessage(person: Person, date: string): string {
   return `✋ ${mention(person)} pulled out of ${formatHuman(date)}`
 }
 
+export function inviteAcceptedMessage(person: Person, inviter: Person, date: string): string {
+  return `✅ ${mention(person)} is in — joining ${mention(inviter)} ${formatHuman(date)}`
+}
+
+export function inviteDeclinedMessage(person: Person, date: string): string {
+  return `✋ ${mention(person)} can't make ${formatHuman(date)}`
+}
+
 export function weekendReminderMessage(signups: Array<Person & { note: string }>): string {
   const who = signups
     .map((s) => (s.note ? `${mention(s)} (${escapeSlackText(s.note)})` : mention(s)))

@@ -8,7 +8,7 @@ export function fakeDb(...results: FakeResult[]): Db {
   let i = 0
   const next = () => results[i++]
   const builder: Record<string, unknown> = {}
-  for (const m of ['select', 'eq', 'gte', 'lte', 'order', 'upsert', 'delete', 'insert', 'limit']) {
+  for (const m of ['select', 'eq', 'gte', 'lte', 'order', 'upsert', 'delete', 'insert', 'limit', 'not', 'update']) {
     builder[m] = () => builder
   }
   builder.maybeSingle = () => Promise.resolve(next())

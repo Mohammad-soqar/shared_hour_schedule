@@ -24,15 +24,27 @@ export interface RiyadhClock {
   ss: number
 }
 
+export interface InviteView {
+  email: string
+  name: string
+  status: 'pending' | 'accepted' | 'declined'
+}
+
 export interface SignupView {
   id: string
   email: string
   date: string
   note: string
-  invited_emails: string[]
-  invited_names: string[]
+  invites: InviteView[]
   display_name: string
   team: string
+}
+
+export interface MyInviteView {
+  id: string
+  date: string
+  note: string
+  inviterName: string
 }
 
 export interface MemberOption {

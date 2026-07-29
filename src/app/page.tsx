@@ -7,7 +7,7 @@ import {
   MAX_WEEKS_AHEAD, todayInRiyadh,
 } from '@/lib/dates'
 import {
-  listMembers, listRecentSignupActivity, listSignups, type SignupActivityRecord,
+  listMembers, listMyInvites, listRecentSignupActivity, listSignups, type SignupActivityRecord,
 } from '@/lib/signups'
 import { createAdminSupabase } from '@/lib/supabase/admin'
 import { BoardClient } from './components/BoardClient'
@@ -54,8 +54,8 @@ function signupEvent(
     ? `✏️ ${record.display_name}'s weekend sign-up on ${formatHuman(record.date)} updated`
     : `🙋 ${record.display_name} is in for the shared hour ${formatHuman(record.date)}`
   if (record.note) text += ` — ${record.note}`
-  if (record.invited_emails.length > 0) {
-    text += ` · asking ${record.invited_emails.map(nameOf).join(', ')} to join`
+  if (record.invites.length > 0) {
+    text += ` · asking ${record.invites.map((i) => nameOf(i.email)).join(', ')} to join`
   }
   return { text, time: timeLabel(record.updated_at, today), at: record.updated_at }
 }
@@ -122,19 +122,23 @@ export default async function SchedulePage({
   const rangeEnd = lastSelectableDate(today)
 
   const db = createAdminSupabase()
-  const [absences, signups, members, absenceActivity, signupActivity] = await Promise.all([
+  const [absences, signups, members, absenceActivity, signupActivity, myInvites] = await Promise.all([
     listAbsences(db, rangeStart, rangeEnd),
     listSignups(db, rangeStart, rangeEnd),
     listMembers(db),
     listRecentActivity(db, FEED_LIMIT),
     listRecentSignupActivity(db, FEED_LIMIT),
+    listMyInvites(db, member.email, today),
   ])
 
   const nameByEmail = new Map(members.map((m) => [m.email, m.display_name]))
   const nameOf = (email: string) => nameByEmail.get(email) ?? email
   const signupViews = signups.map((s) => ({
     ...s,
-    invited_names: s.invited_emails.map(nameOf),
+    invites: s.invites.map((i) => ({ ...i, name: nameOf(i.email) })),
+  }))
+  const myInviteViews = myInvites.map((i) => ({
+    id: i.id, date: i.date, note: i.note, inviterName: i.inviter_name,
   }))
 
   const events = [
@@ -161,6 +165,7 @@ export default async function SchedulePage({
       absences={absences}
       signups={signupViews}
       members={members}
+      myInvites={myInviteViews}
       events={events}
       pinned={pinned}
       coreHourStart={SHARED_HOUR_START}

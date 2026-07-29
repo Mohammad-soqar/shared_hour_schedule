@@ -8,6 +8,7 @@ import type { Member } from '@/lib/absences'
 import { AwayModal } from './AwayModal'
 import { ClockMark } from './ClockMark'
 import { HouseRules } from './HouseRules'
+import { InviteBanner } from './InviteBanner'
 import { PinModal } from './PinModal'
 import { RemoveModal } from './RemoveModal'
 import { SlackPanel } from './SlackPanel'
@@ -15,7 +16,7 @@ import { Toast } from './Toast'
 import { TodayPanel } from './TodayPanel'
 import { WeekLedger } from './WeekLedger'
 import type {
-  AbsenceView, MemberOption, ModalState, PinnedPost, RemovalTarget,
+  AbsenceView, MemberOption, ModalState, MyInviteView, PinnedPost, RemovalTarget,
   RiyadhClock, SignupView, SlackEvent, ToastState,
 } from './types'
 
@@ -42,6 +43,7 @@ interface BoardClientProps {
   absences: AbsenceView[]
   signups: SignupView[]
   members: MemberOption[]
+  myInvites: MyInviteView[]
   events: SlackEvent[]
   pinned: PinnedPost
   coreHourStart: number
@@ -50,7 +52,7 @@ interface BoardClientProps {
 }
 
 export function BoardClient({
-  member, today, offset, maxWeeks, days, absences, signups, members,
+  member, today, offset, maxWeeks, days, absences, signups, members, myInvites,
   events, pinned, coreHourStart, designHourStart, slackConfigured,
 }: BoardClientProps) {
   const myTeam = member.team === 'design' ? 'design' : 'core'
@@ -118,7 +120,31 @@ export function BoardClient({
 
   function mySignupOn(date: string): { note: string; invited_emails: string[] } | null {
     const signup = signups.find((s) => s.email === member.email && s.date === date)
-    return signup ? { note: signup.note, invited_emails: signup.invited_emails } : null
+    return signup ? { note: signup.note, invited_emails: signup.invites.map((i) => i.email) } : null
+  }
+
+  async function respondToInvite(invite: MyInviteView, action: 'accept' | 'decline') {
+    setBusy(true)
+    try {
+      const response = await fetch(`/api/invites/${invite.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
+      const body = await response.json()
+      if (!response.ok) {
+        setToast({ warn: true, text: body.error ?? 'Could not save your answer.' })
+        return
+      }
+      setToast(action === 'accept'
+        ? { warn: false, text: `🙋 You're in with ${invite.inviterName} — the channel knows.` }
+        : { warn: false, text: 'Answered — the channel knows you can\'t make it.' })
+      router.refresh()
+    } catch {
+      setToast({ warn: true, text: 'Network error — try again.' })
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function saveModal() {
@@ -257,6 +283,9 @@ export function BoardClient({
       </header>
 
       <main style={{ width: '100%', maxWidth: 1240, margin: '0 auto', padding: '34px 24px 56px', flex: 1 }}>
+        {myInvites.length > 0 && (
+          <InviteBanner invites={myInvites} busy={busy} onRespond={respondToInvite} />
+        )}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 34, alignItems: 'flex-start' }}>
           <TodayPanel
             today={today}
@@ -272,7 +301,7 @@ export function BoardClient({
             maxWeeks={maxWeeks}
             onOpenAdd={() => setModal({ mode: 'add', date: null, reason: '', invitedEmails: [] })}
             onEditChip={(a) => setModal({ mode: 'edit', date: a.date, reason: a.reason, invitedEmails: [] })}
-            onEditSignupChip={(s) => setModal({ mode: 'edit', date: s.date, reason: s.note, invitedEmails: s.invited_emails })}
+            onEditSignupChip={(s) => setModal({ mode: 'edit', date: s.date, reason: s.note, invitedEmails: s.invites.map((i) => i.email) })}
           />
           <WeekLedger
             days={days}
@@ -288,7 +317,7 @@ export function BoardClient({
               ? { mode: 'add', date, reason: mySignupOn(date)?.note ?? '', invitedEmails: mySignupOn(date)?.invited_emails ?? [] }
               : { mode: 'add', date, reason: myReasonOn(date) ?? '', invitedEmails: [] })}
             onEditAbsence={(a) => setModal({ mode: 'edit', date: a.date, reason: a.reason, invitedEmails: [] })}
-            onEditSignup={(s) => setModal({ mode: 'edit', date: s.date, reason: s.note, invitedEmails: s.invited_emails })}
+            onEditSignup={(s) => setModal({ mode: 'edit', date: s.date, reason: s.note, invitedEmails: s.invites.map((i) => i.email) })}
             onRemoveAbsence={(a) => setRemoveTarget({ id: a.id, date: a.date, kind: 'absence' })}
             onRemoveSignup={(s) => setRemoveTarget({ id: s.id, date: s.date, kind: 'signup' })}
           />
