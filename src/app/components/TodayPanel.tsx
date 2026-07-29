@@ -45,6 +45,7 @@ interface TodayPanelProps {
   clock: RiyadhClock | null
   hourStart: number
   teamName: string
+  localRange: { label: string; zone: string } | null
   otherTeamLine: string
   myTeam: string
   heroRows: AbsenceView[]
@@ -58,7 +59,7 @@ interface TodayPanelProps {
 }
 
 export function TodayPanel({
-  today, clock, hourStart, teamName, otherTeamLine, myTeam, heroRows, heroSignups,
+  today, clock, hourStart, teamName, localRange, otherTeamLine, myTeam, heroRows, heroSignups,
   yourChips, yourSignupChips, maxWeeks, onOpenAdd, onEditChip, onEditSignupChip,
 }: TodayPanelProps) {
   const todayIsWeekend = isWeekend(today)
@@ -125,9 +126,11 @@ export function TodayPanel({
           <div className="font-serif-display" style={{
             fontSize: 38, lineHeight: 1.1, marginTop: 4,
             fontVariantNumeric: 'tabular-nums', color: 'var(--paper)',
-          }}>{hourRangeLabel(hourStart)}</div>
+          }}>{localRange ? localRange.label : hourRangeLabel(hourStart)}</div>
           <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(250,254,252,0.75)', marginTop: 3 }}>
-            every weekday · Riyadh time
+            {localRange
+              ? `your time (${localRange.zone}) · ${hourRangeLabel(hourStart)} Riyadh`
+              : 'every weekday · Riyadh time'}
           </div>
           <div style={{
             fontSize: 10.5, fontWeight: 600, color: 'rgba(250,254,252,0.6)', marginTop: 6,

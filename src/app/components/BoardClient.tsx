@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { hourRangeLabel, teamLabel } from '@/lib/config'
-import { isWeekend } from '@/lib/dates'
+import { isWeekend, todayInRiyadh } from '@/lib/dates'
 import type { Member } from '@/lib/absences'
 import { AwayModal } from './AwayModal'
 import { ClockMark } from './ClockMark'
@@ -21,6 +21,23 @@ import type {
 } from './types'
 
 const TOAST_MS = 4200
+
+export interface LocalHourRange {
+  label: string
+  zone: string
+}
+
+// When the viewer's browser timezone differs from Riyadh, translate the
+// shared hour into their local clock (e.g. 18:00 Riyadh → 20:30 in India).
+function localHourRange(startHour: number): LocalHourRange | null {
+  const start = new Date(`${todayInRiyadh()}T${String(startHour).padStart(2, '0')}:00:00+03:00`)
+  const end = new Date(start.getTime() + 60 * 60 * 1000)
+  const fmt = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  const label = `${fmt.format(start)} – ${fmt.format(end)}`
+  if (label === hourRangeLabel(startHour)) return null
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return { label, zone: zone.split('/').pop()?.replaceAll('_', ' ') ?? zone }
+}
 
 function riyadhClock(): RiyadhClock {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -59,6 +76,7 @@ export function BoardClient({
   const myHourStart = myTeam === 'design' ? designHourStart : coreHourStart
   const router = useRouter()
   const [clock, setClock] = useState<RiyadhClock | null>(null)
+  const [localRange, setLocalRange] = useState<LocalHourRange | null>(null)
   const [modal, setModal] = useState<ModalState | null>(null)
   const [removeTarget, setRemoveTarget] = useState<RemovalTarget | null>(null)
   const [pinOpen, setPinOpen] = useState(false)
@@ -67,13 +85,16 @@ export function BoardClient({
 
   useEffect(() => {
     const tick = () => setClock(riyadhClock())
-    const firstTick = requestAnimationFrame(tick)
+    const firstTick = requestAnimationFrame(() => {
+      tick()
+      setLocalRange(localHourRange(myHourStart))
+    })
     const timer = setInterval(tick, 1000)
     return () => {
       cancelAnimationFrame(firstTick)
       clearInterval(timer)
     }
-  }, [])
+  }, [myHourStart])
 
   useEffect(() => {
     if (!toast) return
@@ -292,6 +313,7 @@ export function BoardClient({
             clock={clock}
             hourStart={myHourStart}
             teamName={teamLabel(myTeam).toLowerCase()}
+            localRange={localRange}
             otherTeamLine={`${teamLabel(myTeam === 'core' ? 'design' : 'core').toLowerCase()} · ${hourRangeLabel(myTeam === 'core' ? designHourStart : coreHourStart)}`}
             myTeam={myTeam}
             heroRows={heroRows}
